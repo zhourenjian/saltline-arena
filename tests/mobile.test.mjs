@@ -352,6 +352,23 @@ await test("the page cannot be scrolled out of place", async () => {
 });
 
 console.log("Brawl ammunition and performance");
+await test("a finger that vanished without a touchend does not lock the left stick", async () => {
+  const page = await phone("&noinstall=1", spoof(IPHONE));
+  pages.push(page);
+  await enterBrawl(page);
+  const p0 = await page.ev(`return [__G.player.pos.x, __G.player.pos.z]`);
+  await page.ev(`
+    const c = document.getElementById("view");
+    const mk = (id, x, y) => new Touch({ identifier: id, target: c, clientX: x, clientY: y });
+    const fire = (type, ch, all) => c.dispatchEvent(new TouchEvent(type, { bubbles: true, cancelable: true, changedTouches: ch, touches: all, targetTouches: all }));
+    const a = mk(1, 80, 600); fire("touchstart", [a], [a]);
+    const b = mk(7, 90, 600); fire("touchstart", [b], [b]);
+    for (let i = 1; i <= 8; i++) { const m = mk(7, 90, 600 - i * 8); fire("touchmove", [m], [m]); }`);
+  await sleep(900);
+  const p1 = await page.ev(`return [__G.player.pos.x, __G.player.pos.z]`);
+  assert(Math.hypot(p1[0] - p0[0], p1[1] - p0[1]) > 1, "the stick still moves the player", { p0, p1 });
+});
+
 await test("brawl has unlimited ammo: reloads never run dry, the HUD shows ∞; other modes keep the reserve", async () => {
   const page = await phone("&noinstall=1");
   pages.push(page);

@@ -424,6 +424,11 @@ function createInput(context) {
       e,
       "touchstart",
       (P) => {
+        // iOS can drop a touchend / touchcancel (system gestures, a notification, switching apps);
+        // a stick or look finger that is no longer on the screen would then hold the slot for ever
+        // and every new touch on the left would become a look drag instead of the stick
+        let live = new Set([...P.touches].map((t) => t.identifier));
+        (w >= 0 && !live.has(w) && ie(), q >= 0 && !live.has(q) && (q = -1));
         if ((P.preventDefault(), !!r))
           for (let V of P.changedTouches)
             V.clientX < ((t && t.clientWidth) || innerWidth) * 0.45 && w < 0
@@ -467,6 +472,8 @@ function createInput(context) {
         passive: !1,
       },
     ));
+  (listen(context, window, "blur", () => (ie(), (q = -1)), void 0, !1),
+    listen(context, document, "visibilitychange", () => document.hidden && (ie(), (q = -1)), void 0, !1));
   let F = (P) => {
     for (let V of P.changedTouches)
       V.identifier === w ? ie() : V.identifier === q && (q = -1);
