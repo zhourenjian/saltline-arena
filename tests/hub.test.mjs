@@ -104,7 +104,7 @@ await test("rules helpers sanitize input", () => {
   assert.equal(nameProblem(""), "", "empty = use the default");
   assert.ok(nameProblem("ab") && nameProblem("123456789") && nameProblem("   !!!   "), "too short / long / no letters");
   assert.equal(nameProblem("Neo7"), "");
-  assert.equal(sanitizeAvatar("girl-purple"), "girl-purple");
+  assert.equal(sanitizeAvatar("masked-raider"), "masked-raider");
   assert.equal(sanitizeAvatar("../etc"), null);
   assert.equal(sanitizeAvatar(42), null);
   assert.equal(normalizeRoomCode(" ab-c9x "), "ABC9");

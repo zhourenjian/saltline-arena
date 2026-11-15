@@ -4,7 +4,7 @@
 //
 //   import createWorld, { manifest } from "./world.js";
 //   const world = createWorld({ container, avatarRoot: "/avatars/" });
-//   await world.load(); await world.enter({ avatar: "girl-purple" });
+//   await world.load(); await world.enter({ avatar: "masked-raider" });
 //   hostLoop((dt) => world.update(dt)); ... world.leave(); world.dispose();
 import fontsCss from "../fonts.css?inline";
 import uiCss from "../ui.css?inline";

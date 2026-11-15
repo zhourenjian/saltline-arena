@@ -119,7 +119,7 @@ try {
     await page.waitFor(`document.querySelectorAll('.ch-item').length >= 2`, 8000);
     const items = await page.ev(`return [...document.querySelectorAll('.ch-item')].map(b => b.dataset.character)`);
     // index.html shows only the two tactical characters (window.SaltlineCharacters hides the rest)
-    assert(!items.includes("") && !items.includes("girl-purple") && !items.includes("voxel-walker"), "operator and the old characters hidden", items);
+    assert(!items.includes(""), "no built-in operator entry", items);
     for (const id of ["swat-operator", "masked-raider"]) assert(items.includes(id), `lists ${id}`, items);
     assert(items.length === 2, "two characters", items);
     // a fresh player wears the configured default
@@ -157,20 +157,16 @@ try {
     const page = await open("");
     await page.waitFor(`DuoWorld.getAvatar() && DuoWorld.getAvatar().id === "masked-raider"`, 30000);
     // an old save of the operator or a hidden package
-    for (const old of [null, "girl-purple"]) {
+    for (const old of [null, "no-such-avatar"]) {
       await page.ev(`localStorage.setItem("saltline.character.v1", JSON.stringify({ id: ${JSON.stringify(old)} }))`);
       const again = await open("");
       await again.waitFor(`DuoWorld.getAvatar() && DuoWorld.getAvatar().id === "swat-operator"`, 30000);
       again.close();
     }
     page.close();
-    // hidden packages stay installed: ?avatar= still wears them
-    const hidden = await open("avatar=girl-purple");
-    await hidden.waitFor(`DuoWorld.getAvatar() && DuoWorld.getAvatar().id === "girl-purple"`, 30000);
-    hidden.close();
-    // ?avatar= still wins over the saved choice
-    const param = await open("avatar=violet-girl");
-    await param.waitFor(`DuoWorld.getAvatar() && DuoWorld.getAvatar().id === "violet-girl"`, 30000);
+    // ?avatar= wins over the saved choice
+    const param = await open("avatar=masked-raider");
+    await param.waitFor(`DuoWorld.getAvatar() && DuoWorld.getAvatar().id === "masked-raider"`, 30000);
     param.close();
   });
 
@@ -314,9 +310,9 @@ try {
       p.yaw = Math.atan2(-dx, -dz); p.pitch = Math.atan2(o.y + ${y} - p.eye.y, d);`);
 
   await test("opponent is visible with their character, shots hit, server applies damage", async () => {
-    await B.ev(`await DuoWorld.setAvatar("girl-purple"); __G.events.emit("character:change", { id: "girl-purple" })`);
-    await A.waitFor(`__G.versus.peer && __G.versus.peer.avatar === "girl-purple"`, 5000);
-    await A.waitFor(`__G.versus.opponent.avatarId === "girl-purple"`, 30000);
+    await B.ev(`await DuoWorld.setAvatar("masked-raider"); __G.events.emit("character:change", { id: "masked-raider" })`);
+    await A.waitFor(`__G.versus.peer && __G.versus.peer.avatar === "masked-raider"`, 5000);
+    await A.waitFor(`__G.versus.opponent.avatarId === "masked-raider"`, 30000);
     await place();
     await sleep(300);
     const los = await A.ev(`const e = __G.player.eye.clone(), o = __G.versus.opponent.pos.clone(); o.y += 1.2; const d = o.clone().sub(e); const L = d.length(); const r = __G.physics.raycast(e, d.normalize(), L); return r ? r.dist : null`);

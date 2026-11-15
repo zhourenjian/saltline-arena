@@ -250,15 +250,14 @@ try {
     });
   }
 
-  await test("switching to a character without a weapon anchor removes the gun; back again restores it; no leaks", async () => {
-    await game.ev(`await DuoWorld.setAvatar("voxel-walker")`);
+  await test("switching characters back and forth keeps exactly one gun and leaks no geometry", async () => {
+    await game.ev(`await DuoWorld.setAvatar("masked-raider")`);
     await sleep(400);
-    assert((await game.ev(`return S.guns().length`)) === 0, "no held gun on a character without the anchor");
     const geo0 = await game.ev(`return __G.renderer.info.memory.geometries`);
     for (let i = 0; i < 6; i++) await game.ev(`await DuoWorld.setAvatar(${JSON.stringify(IDS)}[${i} % 2])`);
     await sleep(400);
     assert((await game.ev(`return S.guns().length`)) === 1, "exactly one gun after switching back and forth");
-    await game.ev(`await DuoWorld.setAvatar("voxel-walker")`);
+    await game.ev(`await DuoWorld.setAvatar("masked-raider")`);
     await sleep(400);
     const geo1 = await game.ev(`return __G.renderer.info.memory.geometries`);
     assert(geo1 <= geo0 + 2, "geometries released", { geo0, geo1 });

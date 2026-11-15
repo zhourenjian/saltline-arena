@@ -2468,7 +2468,7 @@ kbd {
 .install-guide {
   position: absolute;
   inset: 0;
-  z-index: 40;
+  z-index: 60; /* above the menu (50) and every HUD layer */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2889,4 +2889,10 @@ html.is-standalone body {
 }
 .m-more-btn {
   opacity: 0.8;
+}
+
+/* the app box counted taller than the screen (iOS Home Screen): hold it to the screen height */
+html.vp-capped #app {
+  bottom: auto;
+  height: var(--app-h);
 }

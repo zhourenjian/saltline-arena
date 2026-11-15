@@ -42,7 +42,16 @@ function installViewport(context) {
         full = lh >= lw ? long : short,
         gap = isStandalone() ? full - lh : 0;
       gap = gap > 0 && gap <= 80 ? Math.round(gap) : 0;
-      let next = w + "x" + h + "+" + gap;
+      // ... and never taller than the screen itself: a layout that is counted too tall pushes the
+      // bottom controls down into the home indicator (screen.availHeight is the usable height)
+      let availLong = Math.max(screen.availWidth || 0, screen.availHeight || 0),
+        availShort = Math.min(screen.availWidth || 0, screen.availHeight || 0),
+        avail = lh >= lw ? availLong : availShort,
+        cap = Math.min(full, avail > full * 0.8 ? avail : full),
+        capped = isStandalone() && h > cap + 1 && h - cap <= 120;
+      root.classList.toggle("vp-capped", capped);
+      capped && root.style.setProperty("--app-h", cap + "px");
+      let next = w + "x" + h + "+" + gap + (capped ? "c" + cap : "");
       if (next === size) return;
       size = next;
       root.style.setProperty("--fill", gap + "px");
@@ -66,6 +75,25 @@ function installViewport(context) {
   listen(context, window, "scroll", () => (window.scrollX || window.scrollY) && window.scrollTo(0, 0), void 0, !1);
   // see ui.css html.is-standalone: the document itself must be as tall as the screen
   isStandalone() && root.classList.add("is-standalone");
+  // ?vpdebug=1 prints the numbers on screen, for reporting layout problems from a real device
+  if (/[?&]vpdebug=1/.test(location.search)) {
+    let box = document.createElement("pre");
+    box.style.cssText = "position:fixed;left:6px;top:70px;z-index:99;margin:0;padding:4px 6px;font:10px/1.3 monospace;color:#9f9;background:rgba(0,0,0,.7);pointer-events:none;white-space:pre";
+    document.body.appendChild(box);
+    let show = () => {
+      let vv = window.visualViewport,
+        a = document.getElementById("app");
+      box.textContent = [
+        `inner ${innerWidth}x${innerHeight}  vv ${vv ? Math.round(vv.width) + "x" + Math.round(vv.height) : "-"}`,
+        `html ${root.clientWidth}x${root.clientHeight}  app ${a.clientWidth}x${a.clientHeight}`,
+        `screen ${screen.width}x${screen.height} avail ${screen.availWidth}x${screen.availHeight}`,
+        `standalone ${isStandalone()}  fill ${root.style.getPropertyValue("--fill") || 0}  capped ${root.classList.contains("vp-capped")}`,
+        `sab ${getComputedStyle(root).getPropertyValue("--sab")} sat ${getComputedStyle(root).getPropertyValue("--sat")}`,
+      ].join("\n");
+    };
+    setInterval(show, 500);
+    show();
+  }
   measure();
   return { measure, get size() { return size; } };
 }

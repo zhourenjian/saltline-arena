@@ -71,21 +71,11 @@
     <!-- DuoWorld avatar registry (classic script: must run before any avatar.js) -->
     <script src="./duoworld/avatar-registry.js"></script>
     <!-- Installed Avatar Packages (public/avatars/<id>/). Registering is cheap: models load
-         only when an avatar is worn. To wear one by default, uncomment:
-         <script>window.DuoWorldInitialAvatar = "girl-purple";</script> -->
-    <!-- Character menu (host config): hide the built-in operator body and the listed packages from
-         the CHARACTER list; `default` is worn by players who never picked one. Hidden avatars
-         stay installed (?avatar=<id> and DuoWorld.setAvatar() still work). -->
-    <script>window.SaltlineCharacters = { builtIn: false, hide: ["girl-purple", "violet-girl", "voxel-walker", "blue-captain", "orange-mechanic", "jade-swordswoman", "red-runner"], default: "swat-operator" };</script>
+         only when an avatar is worn. -->
+    <!-- Character menu: the two soldiers; new players wear the SWAT Operator. -->
+    <script>window.SaltlineCharacters = { builtIn: false, default: "swat-operator" };</script>
     <script src="./avatars/swat-operator/avatar.js"></script>
     <script src="./avatars/masked-raider/avatar.js"></script>
-    <script src="./avatars/girl-purple/avatar.js"></script>
-    <script src="./avatars/violet-girl/avatar.js"></script>
-    <script src="./avatars/voxel-walker/avatar.js"></script>
-    <script src="./avatars/blue-captain/avatar.js"></script>
-    <script src="./avatars/orange-mechanic/avatar.js"></script>
-    <script src="./avatars/jade-swordswoman/avatar.js"></script>
-    <script src="./avatars/red-runner/avatar.js"></script>
     <script type="module" src="./src/game.js"></script>
   </body>
 </html>

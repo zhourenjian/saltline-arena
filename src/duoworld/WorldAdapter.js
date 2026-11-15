@@ -185,7 +185,8 @@ function createSaltlineWorld(options = {}) {
       // back to the configured default; the host's own choice (?avatar=, enter()) always wins
       let saved = loadCharacterChoice(),
         menu = characterMenuConfig(globalThis.SaltlineCharacters),
-        offered = typeof saved == "string" ? !menu.hide.has(saved) : saved === null && menu.builtIn;
+        known = (id) => !!(globalThis.DuoWorldAvatars && globalThis.DuoWorldAvatars.list().some((d) => d.id === id)),
+        offered = typeof saved == "string" ? !menu.hide.has(saved) && known(saved) : saved === null && menu.builtIn;
       offered ? saved !== null && (queuedAvatar = saved) : menu.default && (queuedAvatar = menu.default);
     }
     if (queuedAvatar !== void 0) {

@@ -1,5 +1,7 @@
 # Saltline Arena
 
+**中文** · [English](README.en.md)
+
 **免费的浏览器多人 FPS：港口里的自由混战，手机和电脑都能玩，不用下载、不用注册。**
 
 ## 在线试玩
@@ -13,9 +15,9 @@
 
 ## 来源和关系
 
-Saltline Arena 是在 **[realskyrin/fps3ademo-saltline](https://github.com/realskyrin/fps3ademo-saltline)**（原项目，一个把 Claude Artifact 里的 Saltline 单机游戏恢复成可运行、可分析的本地项目）的基础上，独立发展出来的**多人联机版本**：
+Saltline 最初由 **[Felix Rieseberg](https://x.com/felixrieseberg/status/2119925633564463609)** 创作并发布（Claude Artifact 里的单机 FPS）。Saltline Arena 是在 **[realskyrin/fps3ademo-saltline](https://github.com/realskyrin/fps3ademo-saltline)**（原项目，一个把 Claude Artifact 里的 Saltline 单机游戏恢复成可运行、可分析的本地项目）的基础上，独立发展出来的**多人联机版本**：
 
-- **来自原项目**：Saltline 的单人任务、港口关卡、武器、音效、画面和菜单风格，以及模块化后的代码结构。原游戏最早来自 [Claude Artifact](https://claude.ai/artifact/BGY1SztrAYcJQHSsnHHGmp)。
+- **来自原项目**：Saltline 的单人任务、港口关卡、武器、音效、画面和菜单风格，以及模块化后的代码结构。原游戏的作者是 [Felix Rieseberg](https://x.com/felixrieseberg/status/2119925633564463609)，最早发布为 [Claude Artifact](https://claude.ai/artifact/BGY1SztrAYcJQHSsnHHGmp)。
 - **本项目新增**：联机服务器（`server/`）、1v1 对战、6 人大乱斗（排队、旁观、聊天、对讲）、DuoWorld World Package 适配和 Avatar（SWAT Operator、Masked Raider，持枪动作和换弹同步）、攀爬、手机触控与 Home Screen 全屏支持、自适应画质与 30 fps 兜底。
 - **目的不同**：原项目的目的是还原并分析 Saltline 的代码结构；本项目是以扩展玩法、让更多人在线玩为目的的独立项目，不是原仓库的镜像，也不会向原仓库提交。
 
@@ -27,11 +29,9 @@ Saltline Arena 是在 **[realskyrin/fps3ademo-saltline](https://github.com/reals
 
 ## 游戏截图
 
-![Saltline 港口战斗场景](docs/screenshots/saltline-harbor.png)
+![大乱斗：两名玩家在同一个港口场景里对峙](docs/screenshots/arena-duel.jpg)
 
-![Saltline 仓库内换弹动作](docs/screenshots/saltline-reload.png)
-
-![Saltline 港口交火场景](docs/screenshots/saltline-combat.png)
+![旁观者视角：排队的玩家跟随正在对战的玩家，右侧是排队列表](docs/screenshots/arena-spectate.jpg)
 
 ## 本地开发
 
@@ -59,23 +59,23 @@ npm run preview
 `npm run build` 生成两份产物：
 
 - `dist/standalone/`：独立网页版，预览地址 <http://127.0.0.1:4173/>。只使用相对路径，可以放到任意静态 HTTP 服务的任意子路径下；应通过 HTTP 打开，以便脚本模块和浏览器输入正常工作。
-- `dist/world-package/`：DuoWorld World Package（`world.json` + `world.js` + `assets/`），供 DuoWorld 宿主加载，见下文。
+- `dist/world-package/`：DuoWorld World Package（`world.json` + `world.js` + `assets/`），供 DuoWorld 宿主加载（相关文档在本地的 `duoworld/` 目录，不随仓库发布）。
 
 ## 主菜单、角色选择、1v1 对战和大乱斗
 
-主菜单提供 **MISSION**（原版单人任务）、**1V1 DUEL**、**BRAWL**（大乱斗）、**CHARACTER**、**SETTINGS** 和 **CONTROLS**。
+主菜单是一个大的 **Play**（进入大乱斗），下面是 **Character**、**Settings**、**Controls**；**More modes** 里藏着 **Mission**（原版单人任务）和 **1v1 Duel**。
 
-- **角色选择（CHARACTER）**：在已安装的 Avatar 包之间选择，右侧实时预览，两个警匪风格角色（都戴头套、不露脸）：**SWAT Operator**（中蓝色作战服、头盔、护目镜、防弹背心）和 **Masked Raider**（卡其色夹克、橄榄绿长裤、沙色头套、红围巾），两套都是亮色，在场景里容易分辨。角色本身不带枪，预览时空手；进入游戏后手里拿的就是第一人称那支 PAC-9。选择会保存在 `localStorage`（`saltline.character.v1`）。URL 的 `?avatar=` 和宿主指定的 Avatar 优先于保存的选择。列表由 `index.html` 里的 `window.SaltlineCharacters` 控制：现在只显示这两个，新玩家默认穿 `swat-operator`；原 Operator 和其余 7 个旧角色被隐藏但仍然安装着，`?avatar=girl-purple` 照样能用；以前保存了隐藏角色的玩家会换成默认角色。
+- **角色选择（CHARACTER）**：在已安装的 Avatar 包之间选择，右侧实时预览，两个警匪风格角色（都戴头套、不露脸）：**SWAT Operator**（中蓝色作战服、头盔、护目镜、防弹背心）和 **Masked Raider**（卡其色夹克、橄榄绿长裤、沙色头套、红围巾），两套都是亮色，在场景里容易分辨。角色本身不带枪，预览时空手；进入游戏后手里拿的就是第一人称那支 PAC-9。选择会保存在 `localStorage`（`saltline.character.v1`）。URL 的 `?avatar=` 和宿主指定的 Avatar 优先于保存的选择。列表由 `index.html` 里的 `window.SaltlineCharacters` 控制：现在只列出这两个；没有选择时默认穿 SWAT Operator。
 - **攀爬**：在箱子或矮墙前按住 **W** 再按 **Space** 翻上去。站在地上能翻 0.62–1.65 m 高的边沿，跳起后在空中能抓住 2.25 m 以内的边沿，更高的墙不能攀爬。攀爬时不能开火。翻越时第三人称身体有具体动作：双手抓住边沿、膝盖蹬上、枪背到身后；爬梯子是交替抓握。换弹和检视（闲置时把枪侧过来看）会同步给其他玩家：别人能看到你卸弹匣、插弹匣、拉机柄。对手的火光和曳光从对方手里那支枪的枪口喷出，第一人称手臂的袖子和手套颜色会按所穿角色换色。
 - **1v1 对战**：先启动自带的对战服务器，然后一人创建房间，另一人输入 4 位房间码加入。港口地图，没有 AI，先拿到 5 杀的一方获胜，阵亡 3 秒后在远处重生。
 
 ```sh
 npm run server                 # 默认监听 0.0.0.0:8787
 PORT=9000 npm run server       # 换端口
-ALLOWED_ORIGINS=https://example.github.io npm run server   # 只接受这些页面的连接
+ALLOWED_ORIGINS=https://example.com npm run server   # 只接受这些页面的连接
 ```
 
-两台电脑在同一局域网时，在对战菜单里填 `ws://<服务器电脑的 IP>:8787`。GitHub Pages 版本是 HTTPS 页面，浏览器要求使用 `wss://`：需要把服务器部署在带 TLS 的反向代理后面。也可以用 `?server=wss://duel.example.com` 预填地址。
+两台电脑在同一局域网时，在对战菜单里填 `ws://<服务器电脑的 IP>:8787`。HTTPS 页面里浏览器要求使用 `wss://`：需要把服务器部署在带 TLS 的反向代理后面。也可以用 `?server=wss://duel.example.com` 预填地址。
 
 对战服务器决定血量、伤害、击杀、比分和出生点，但命中由客户端上报。服务器只做频率和距离检查，**不防作弊**，只适合和朋友对战。
 
@@ -107,29 +107,6 @@ BRAWL_MAX_PLAYERS=4 BRAWL_CULL_SECONDS=120 BRAWL_CULL_COUNT=2 npm run server
 
 禁言按「IP 地址 + 昵称」记录：同一网络下的其他人不受影响，断线重连也不会解除；但换昵称重连可以绕过。
 
-## DuoWorld World
-
-Saltline 实现了 DuoWorld World Protocol 0.1.0（World ID `saltline.harbor`），可以作为 World Package 被宿主加载，也可以穿戴 Avatar Package。不佩戴 Avatar 时玩法和画面与原版一致。
-
-```js
-await window.DuoWorld.setAvatar("girl-purple");   // 运行时切换，不刷新页面
-window.DuoWorld.setCameraMode("third-person");    // 或在游戏中按 T
-```
-
-- 安装 Avatar：把包目录放进 `public/avatars/<id>/`（入口 `avatar.js`），不需要改 World 代码。警匪角色 `swat-operator`、`masked-raider` 由 `node scripts/build-soldier-avatars.mjs` 生成（程序化身体和动作；包不带枪，枪由 World 通过 `weapon` 挂点和 `held` 抓握框交到手里，见 `docs/DUOWORLD.md`）。另有 7 个旧角色：`girl-purple`（Sakura Girl），以及 6 个方块角色 `violet-girl` 紫衣少女、`voxel-walker` 墨衣行者、`blue-captain` 蓝衣船长、`orange-mechanic` 橙衣机师、`jade-swordswoman` 青衣侠女、`red-runner` 红衣跑者（新角色由 `node scripts/build-avatar-models.mjs` 生成）。
-- 统一身高：World 把每个 Avatar 的外形按 `1.75 / metadata.height` 等比缩放，所有角色画面上一样高；对战命中盒本来就是固定胶囊（半径 0.42 m、高 1.8 m），与外形无关。
-- 默认 Avatar：在 `index.html` 中设置 `window.DuoWorldInitialAvatar = "<id>"`，或使用 URL 参数 `?avatar=<id>&view=third`。
-- 测试：`npm test`（headless Chrome，覆盖协议要求的 15 个测试项，结果写入 `tests/out/`）。
-- Avatar 脚本以页面权限运行，**没有对不可信代码做沙箱隔离**。
-
-接口、生命周期、能力声明、安全边界、兼容性测试结果和已知限制见 [`docs/DUOWORLD.md`](docs/DUOWORLD.md)。
-
-## GitHub Pages 部署
-
-仓库已启用 GitHub Pages，发布来源为 **GitHub Actions**。[部署工作流](https://github.com/realskyrin/fps3ademo-saltline/actions/workflows/pages.yml) 在推送到 `main` 时自动运行，也可通过 **Run workflow** 手动触发。工作流检查 Pages 配置，执行 `npm ci`、`npm run check` 和 `npm run build`，然后发布 `dist/standalone/`。
-
-在其他仓库使用这套工作流时，需要先到 **Settings → Pages → Build and deployment → Source** 选择 **GitHub Actions**，否则部署接口会返回 404。
-
 ## 继续修改
 
 | 文件 | 内容 |
@@ -152,8 +129,7 @@ window.DuoWorld.setCameraMode("third-person");    // 或在游戏中按 T
 | `vite.config.js` | 开发服务器、独立版构建和 source map 配置 |
 | `vite.world.config.js`、`scripts/build-world-package.mjs` | World Package 构建 |
 | `src/versus/`、`src/brawl/`、`server/` | 1v1 对战、大乱斗客户端和零依赖 WebSocket 服务器 |
-| `tests/` | DuoWorld 兼容性、对战、大乱斗、梯子的自动化测试，测试用 Avatar 和参考宿主 |
-| `docs/DUOWORLD.md` | DuoWorld 接入说明和兼容性报告 |
+| `tests/` | 对战、大乱斗、梯子、手机适配的自动化测试 |
 | `archive/original.html` | 与原站发布清单逐字节校验一致的原始单文件 |
 | `archive/manifest.json` | 来源、发布版本、原始大小与 SHA-256 |
 | `docs/DEVELOPMENT.md` | 游戏代码定位和诊断入口 |

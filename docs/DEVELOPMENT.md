@@ -98,7 +98,7 @@ Vite 将独立版的入口、ES 模块、CSS、字体和 `public/avatars/` 输�
 ```sh
 npm run check            # 检查所有模块的语法、导入/导出、循环依赖和归档完整性
 npm run build            # 构建独立版和 World Package
-npm test                 # 全部测试：hub、brawl、duoworld、modes、ladder、brawl-e2e（headless Chrome），见 docs/DUOWORLD.md
+npm test                 # 全部测试：hub、brawl、modes、ladder、brawl-e2e（headless Chrome）
 npm run test:brawl       # 只跑大乱斗的单元测试和浏览器测试
 npm run verify:refactor  # 可选：核对本次拆分与原始归档的代码等价性
 ```
@@ -117,7 +117,7 @@ npm run verify:refactor  # 可选：核对本次拆分与原始归档的代码�
 
 ## 手机和平板
 
-- **全屏 / 主屏幕**：`index.html` 带 `apple-mobile-web-app-capable`、`black-translucent` 状态栏、`manifest.webmanifest`（`display: fullscreen`，相对路径，GitHub Pages 子路径可用）和 `public/icons/`（`node scripts/build-icons.mjs` 用无头 Chrome 重画）。`src/ui/install-guide.js`：触屏且不是主屏幕模式时，标题页出现“Add to Home Screen”链接，并在首次访问时自动弹出分平台的步骤（iOS：分享 ▸ 添加到主屏幕；Android：菜单 ▸ 安装应用，浏览器给出 `beforeinstallprompt` 时有“Install now”，另有 Fullscreen API 按钮）；“稍后”记 7 天（`localStorage saltline.install.hideUntil`）；`?noinstall=1` 关闭，`?install=1` 强制。
+- **全屏 / 主屏幕**：`index.html` 带 `apple-mobile-web-app-capable`、`black-translucent` 状态栏、`manifest.webmanifest`（`display: fullscreen`，相对路径）和 `public/icons/`（`node scripts/build-icons.mjs` 用无头 Chrome 重画）。`src/ui/install-guide.js`：触屏且不是主屏幕模式时，标题页出现“Add to Home Screen”链接，并在首次访问时自动弹出分平台的步骤（iOS：分享 ▸ 添加到主屏幕；Android：菜单 ▸ 安装应用，浏览器给出 `beforeinstallprompt` 时有“Install now”，另有 Fullscreen API 按钮）；“稍后”记 7 天（`localStorage saltline.install.hideUntil`）；`?noinstall=1` 关闭，`?install=1` 强制。
 - **横竖屏**：`#app` 是 `position: fixed; inset: 0`（不再用 `innerHeight` 设像素，避免主屏幕模式下底部 home bar 处留黑边）；`src/app/viewport.js` 量的是 `#app` 的布局尺寸，旋转后 1.6 s 内多次重测（iOS 会先报旧尺寸），页面滚动位置钉在 0，尺寸变化时派发 `saltline-viewport`，渲染器和 HUD 都听它。
 - **主屏幕底部黑边（iOS 26+）**：`viewport-fit=cover` + `black-translucent` 的主屏幕应用里，只要文档本身比屏幕矮，WebKit 就把视口缩短一个状态栏高度（WebKit bug 301108），底部那一条不绘制（真机截图黑条 ≈ 62 css px）。`position: fixed` 的 html 没有自己的高度，所以 `viewport.js` 在主屏幕模式给 html 加 `is-standalone`，CSS 让 html/body 成为 `100lvh` 的普通盒子，视口即恢复整屏；`--fill` 兜底保留。参考：frappe-ui PR #1284/#1289、yuvomi PR #2546。
 - **菜单按钮**：触屏右上角固定有 `MENU`（原 ESC），FPS / PING 读数和大乱斗排行榜在触屏上让开它和弹药数。
