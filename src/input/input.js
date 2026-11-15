@@ -431,7 +431,8 @@ function createInput(context) {
         (w >= 0 && !live.has(w) && ie(), q >= 0 && !live.has(q) && (q = -1));
         if ((P.preventDefault(), !!r))
           for (let V of P.changedTouches)
-            V.clientX < ((t && t.clientWidth) || innerWidth) * 0.45 && w < 0
+            (V.clientX < ((t && t.clientWidth) || innerWidth) * 0.45 && w < 0 && console.log(`[touch] stick start id=${V.identifier} x=${V.clientX | 0} y=${V.clientY | 0} r=${r}`),
+            V.clientX < ((t && t.clientWidth) || innerWidth) * 0.45 && w < 0)
               ? ((w = V.identifier),
                 (S = V.clientX),
                 (z = V.clientY),

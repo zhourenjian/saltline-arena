@@ -2890,3 +2890,13 @@ html.is-standalone body {
 .m-more-btn {
   opacity: 0.8;
 }
+
+/* Home Screen app: the box is the size the viewport module computed, not whatever layout the
+   browser has caught up with (it lags behind a rotation and can stay stale) */
+html.is-standalone #app {
+  inset: auto;
+  left: 0;
+  top: 0;
+  width: var(--vw, 100%);
+  height: var(--vh, 100%);
+}
