@@ -2972,3 +2972,29 @@ html.is-standalone #app {
     gap: 8px;
   }
 }
+
+/* character select: Done is always a full-width row; sideways, the card shrinks to its content
+   and sits in the bottom-left corner (the model gets the rest of the screen) */
+.m-card.m-chars .m-actions .btn.primary {
+  flex: 1 1 100%;
+}
+@media (orientation: landscape) and (max-height: 520px) {
+  .m-card.m-chars {
+    top: auto;
+    bottom: calc(8px + var(--sab));
+    height: auto;
+    padding: 10px 12px 12px;
+  }
+  .m-card.m-chars .m-k,
+  .m-card.m-chars .m-line,
+  .m-card.m-chars .ch-info {
+    display: none;
+  }
+  .m-card.m-chars .m-h {
+    font-size: clamp(24px, 8vh, 34px) !important;
+    margin: 0 0 2px !important;
+  }
+  .m-card.m-chars .m-actions {
+    margin-top: 10px;
+  }
+}
