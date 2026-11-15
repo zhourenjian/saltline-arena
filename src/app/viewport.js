@@ -96,7 +96,7 @@ function installViewport(context) {
     tick++;
     // touch devices: a status line every 3 s even when the stick is idle (or not recognised)
     d && g.input.touch && tick % 6 === 0 && console.log(`[input] touch w=${d.w} q=${d.q} r=${d.r} crouchT=${d.jc} stick=${!!document.querySelector(".t-stick.on")} state=${g.game && g.game.state} mode=${g.game && g.game.mode} player=${!!g.player} en=${g.player && g.player.enabled}`);
-    d && d.w >= 0 && g.player && console.log(`[stick] H=${d.H.toFixed(2)} O=${d.O.toFixed(2)} r=${d.r} move=${g.input.move.x.toFixed(2)},${g.input.move.y.toFixed(2)} spd=${(g.player.speed || 0).toFixed(2)} gnd=${g.player.onGround} crouch=${g.player.crouching} en=${g.player.enabled} pos=${g.player.pos.x.toFixed(1)},${g.player.pos.z.toFixed(1)} dt=${g.time && g.time.dt} state=${g.game && g.game.state}`);
+    d && d.w !== null && g.player && console.log(`[stick] H=${d.H.toFixed(2)} O=${d.O.toFixed(2)} r=${d.r} move=${g.input.move.x.toFixed(2)},${g.input.move.y.toFixed(2)} spd=${(g.player.speed || 0).toFixed(2)} gnd=${g.player.onGround} crouch=${g.player.crouching} en=${g.player.enabled} pos=${g.player.pos.x.toFixed(1)},${g.player.pos.z.toFixed(1)} dt=${g.time && g.time.dt} state=${g.game && g.game.state}`);
   }, 500);
   if (dbg) {
     let box = document.createElement("pre");

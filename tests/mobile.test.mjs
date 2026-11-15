@@ -375,7 +375,7 @@ await test("Home Screen app on a 402x874 phone: the app box holds one height thr
   assert(a.length === 1 && a[0] === "402x874", "back to portrait: one stable size", a);
 });
 
-await test("a finger that vanished without a touchend does not lock the left stick", async () => {
+await test("touch ids may be negative (iOS 26) and a finger that vanished without a touchend does not lock the left stick", async () => {
   const page = await phone("&noinstall=1", spoof(IPHONE));
   pages.push(page);
   await enterBrawl(page);
@@ -384,9 +384,9 @@ await test("a finger that vanished without a touchend does not lock the left sti
     const c = document.getElementById("view");
     const mk = (id, x, y) => new Touch({ identifier: id, target: c, clientX: x, clientY: y });
     const fire = (type, ch, all) => c.dispatchEvent(new TouchEvent(type, { bubbles: true, cancelable: true, changedTouches: ch, touches: all, targetTouches: all }));
-    const a = mk(1, 80, 600); fire("touchstart", [a], [a]);
-    const b = mk(7, 90, 600); fire("touchstart", [b], [b]);
-    for (let i = 1; i <= 8; i++) { const m = mk(7, 90, 600 - i * 8); fire("touchmove", [m], [m]); }`);
+    const a = mk(-117731596, 80, 600); fire("touchstart", [a], [a]);
+    const b = mk(-117731594, 90, 600); fire("touchstart", [b], [b]);
+    for (let i = 1; i <= 8; i++) { const m = mk(-117731594, 90, 600 - i * 8); fire("touchmove", [m], [m]); }`);
   await sleep(900);
   const p1 = await page.ev(`return [__G.player.pos.x, __G.player.pos.z]`);
   assert(Math.hypot(p1[0] - p0[0], p1[1] - p0[1]) > 1, "the stick still moves the player", { p0, p1 });

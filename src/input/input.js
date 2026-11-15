@@ -148,7 +148,7 @@ function createInput(context) {
       (u = 0),
       (j = !1),
       (jc = !1),
-      M && (M.btn.ads.classList.remove("active"), M.btn.crouch.classList.remove("active"), ie(), (q = -1), (D = -1)));
+      M && (M.btn.ads.classList.remove("active"), M.btn.crouch.classList.remove("active"), ie(), (q = null), (D = null)));
   }
   (listen(context, window, "keydown", (P) => {
     let V = KEY_BINDINGS[P.code];
@@ -293,15 +293,15 @@ function createInput(context) {
   }
   let M = null,
     E = 0,
-    w = -1,
+    w = null,
     S = 0,
     z = 0,
     H = 0,
     O = 0,
-    q = -1,
+    q = null,
     U = 0,
     T = 0,
-    D = -1,
+    D = null,
     C = 0,
     G = 0,
     jc = !1,
@@ -360,7 +360,7 @@ function createInput(context) {
             let fe = !1;
             for (let le of oe.changedTouches) le.identifier === D && (fe = !0);
             if (!fe) return;
-            D = -1;
+            D = null;
           }
           (Z.classList.remove("active"), d("touch", L, !1));
         }
@@ -405,7 +405,7 @@ function createInput(context) {
       p("touch"));
   }
   function ie() {
-    ((w = -1), (H = O = 0), M && M.stick.classList.remove("on"));
+    ((w = null), (H = O = 0), M && M.stick.classList.remove("on"));
   }
   (listen(
     context,
@@ -428,11 +428,10 @@ function createInput(context) {
         // a stick or look finger that is no longer on the screen would then hold the slot for ever
         // and every new touch on the left would become a look drag instead of the stick
         let live = new Set([...P.touches].map((t) => t.identifier));
-        (w >= 0 && !live.has(w) && ie(), q >= 0 && !live.has(q) && (q = -1));
+        (w !== null && !live.has(w) && ie(), q !== null && !live.has(q) && (q = null));
         if ((P.preventDefault(), !!r))
           for (let V of P.changedTouches)
-            (V.clientX < ((t && t.clientWidth) || innerWidth) * 0.45 && w < 0 && console.log(`[touch] stick start id=${V.identifier} x=${V.clientX | 0} y=${V.clientY | 0} r=${r}`),
-            V.clientX < ((t && t.clientWidth) || innerWidth) * 0.45 && w < 0)
+            V.clientX < ((t && t.clientWidth) || innerWidth) * 0.45 && w === null
               ? ((w = V.identifier),
                 (S = V.clientX),
                 (z = V.clientY),
@@ -441,7 +440,7 @@ function createInput(context) {
                   ((M.stick.style.transform = `translate3d(${S}px,${z}px,0)`),
                   (M.nub.style.transform = "translate3d(0,0,0)"),
                   M.stick.classList.add("on")))
-              : q < 0 && ((q = V.identifier), (U = V.clientX), (T = V.clientY));
+              : q === null && ((q = V.identifier), (U = V.clientX), (T = V.clientY));
       },
       {
         passive: !1,
@@ -473,11 +472,11 @@ function createInput(context) {
         passive: !1,
       },
     ));
-  (listen(context, window, "blur", () => (ie(), (q = -1)), void 0, !1),
-    listen(context, document, "visibilitychange", () => document.hidden && (ie(), (q = -1)), void 0, !1));
+  (listen(context, window, "blur", () => (ie(), (q = null)), void 0, !1),
+    listen(context, document, "visibilitychange", () => document.hidden && (ie(), (q = null)), void 0, !1));
   let F = (P) => {
     for (let V of P.changedTouches)
-      V.identifier === w ? ie() : V.identifier === q && (q = -1);
+      V.identifier === w ? ie() : V.identifier === q && (q = null);
   };
   (listen(context, e, "touchend", F, {
     passive: !1,
@@ -553,7 +552,7 @@ function createInput(context) {
       ((V = (n.has("right") ? 1 : 0) - (n.has("left") ? 1 : 0)),
         (Y = (n.has("forward") ? 1 : 0) - (n.has("back") ? 1 : 0)),
         (L = n.has("sprint")),
-        w >= 0 &&
+        w !== null &&
           ((V += H), (Y += O), Math.hypot(H, O) > 0.93 && O > 0.8 && (L = !0)),
         (V += re),
         (Y += $));
