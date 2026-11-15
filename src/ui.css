@@ -2941,3 +2941,34 @@ html.is-standalone #app {
     top: calc(112px + var(--sat));
   }
 }
+
+/* brawl entry card: the same layout in both orientations — Join on its own row, Watch only and
+   Back side by side below; the server field stays hidden (?server= still fills it) */
+.vs-field[hidden] {
+  display: none;
+}
+.m-versus[data-s="brawl"] .m-actions .btn.primary {
+  flex: 1 1 100%;
+}
+.m-versus[data-s="brawl"] .m-actions .btn:not(.primary) {
+  flex: 1 1 0;
+  padding-left: 8px;
+  padding-right: 8px;
+}
+@media (max-height: 520px) {
+  .m-versus[data-s="brawl"] .m-h {
+    font-size: clamp(24px, 8vh, 34px) !important;
+    margin: 2px 0 4px !important;
+  }
+  .m-versus[data-s="brawl"] .m-line {
+    font-size: 13px;
+    line-height: 1.4;
+  }
+  .m-versus[data-s="brawl"] .vs-form {
+    margin-top: 8px;
+  }
+  .m-versus[data-s="brawl"] .m-actions {
+    margin-top: 10px;
+    gap: 8px;
+  }
+}

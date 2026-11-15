@@ -155,7 +155,7 @@ function createMenus(context, e) {
       <h2 class="m-h">Duel</h2>
       <p class="m-line">First to 5 kills. No machines. Respawn 3 s after a death. Both players connect to the same duel server (<code>npm run server</code>).</p>
       <div class="vs-form">
-        <label class="vs-field"><span>Server</span><input data-f="vs-server" type="text" spellcheck="false" autocomplete="off" inputmode="url"></label>
+        <label class="vs-field" hidden><span>Server</span><input data-f="vs-server" type="text" spellcheck="false" autocomplete="off" inputmode="url"></label>
         <label class="vs-field"><span>Callsign</span><input data-f="vs-name" type="text" minlength="3" maxlength="8" spellcheck="false" autocomplete="off"></label>
       </div>
       <div class="vs-lobby" data-f="vs-lobby">
@@ -176,9 +176,9 @@ function createMenus(context, e) {
     <section class="m-screen m-card m-versus" data-s="brawl" aria-label="Brawl">
       <div class="m-k">Harbor \xB7 free for all</div>
       <h2 class="m-h">Brawl</h2>
-      <p class="m-line">Up to 6 players per arena, everyone against everyone. If a seat is free you jump straight in; otherwise you queue and watch. While people wait, the last place is cut every minute and the next in line takes the seat. Spectators can follow any player or fly a free camera, and chat by text or push-to-talk.</p>
+      <p class="m-line">Up to 6 players, everyone against everyone. Arena full? You queue and watch. Last place is cut every minute while people wait.</p>
       <div class="vs-form">
-        <label class="vs-field"><span>Server</span><input data-f="br-server" type="text" spellcheck="false" autocomplete="off" inputmode="url"></label>
+        <label class="vs-field" hidden><span>Server</span><input data-f="br-server" type="text" spellcheck="false" autocomplete="off" inputmode="url"></label>
         <label class="vs-field"><span>Callsign</span><input data-f="br-name" type="text" minlength="3" maxlength="8" spellcheck="false" autocomplete="off"></label>
       </div>
       <p class="vs-status" data-f="br-status" role="status" aria-live="polite"></p>
