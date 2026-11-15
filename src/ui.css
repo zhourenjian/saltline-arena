@@ -2973,8 +2973,8 @@ html.is-standalone #app {
   }
 }
 
-/* character select: Done is always a full-width row; sideways, the card shrinks to its content
-   and sits in the bottom-left corner (the model gets the rest of the screen) */
+/* character select: Done is always a full-width row; sideways the card keeps all its text and
+   simply docks in the bottom-left corner (the model gets the rest of the screen) */
 .m-card.m-chars .m-actions .btn.primary {
   flex: 1 1 100%;
 }
@@ -2983,18 +2983,22 @@ html.is-standalone #app {
     top: auto;
     bottom: calc(8px + var(--sab));
     height: auto;
-    padding: 10px 12px 12px;
   }
-  .m-card.m-chars .m-k,
-  .m-card.m-chars .m-line,
-  .m-card.m-chars .ch-info {
-    display: none;
+}
+/* the callsign row is a step of its own: room above it */
+.m-versus[data-s="brawl"] .vs-form {
+  margin-top: 22px;
+}
+@media (max-height: 520px) {
+  .m-versus[data-s="brawl"] .vs-form {
+    margin-top: 18px;
   }
-  .m-card.m-chars .m-h {
-    font-size: clamp(24px, 8vh, 34px) !important;
-    margin: 0 0 2px !important;
-  }
-  .m-card.m-chars .m-actions {
-    margin-top: 10px;
-  }
+}
+
+/* the on-screen keyboard is up over a text field: the whole menu moves up (see viewport.js) */
+.menu.kb-up {
+  transform: translateY(calc(-1 * var(--kb-shift, 0px)));
+}
+.menu {
+  transition: transform 0.18s ease-out;
 }

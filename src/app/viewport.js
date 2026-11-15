@@ -120,8 +120,58 @@ function installViewport(context) {
     setInterval(show, 500);
     show();
   }
+  installKeyboardLift(context);
   measure();
   return { measure, get size() { return size; } };
+}
+
+// A text field in a menu card that the on-screen keyboard would cover: lift the whole menu by just
+// enough (keyboard height from the visual viewport, plus a strip for the input-assist bar), and
+// put it back when the field loses focus.
+function installKeyboardLift(context) {
+  let menu = null,
+    shift = 0,
+    timers = [],
+    field = null,
+    apply = (px) => {
+      shift = px;
+      menu = menu || document.querySelector(".menu");
+      if (!menu) return;
+      menu.style.setProperty("--kb-shift", px + "px");
+      menu.classList.toggle("kb-up", px > 0);
+    },
+    lift = () => {
+      let vv = window.visualViewport;
+      if (!field || !vv) return;
+      let r = field.getBoundingClientRect(),
+        // the keyboard is up when the visual viewport is clearly shorter than the layout viewport
+        keyboard = window.innerHeight - vv.height > 80,
+        bottomEdge = vv.offsetTop + vv.height - (keyboard ? 56 : 8), // 56: input-assist bar and a margin
+        natural = r.bottom + shift, // where the field would be without the lift
+        need = Math.max(0, Math.ceil(natural + 8 - bottomEdge));
+      // never lift past the top: keep the card's own top on screen
+      need > 0 && need !== shift && apply(Math.min(need, Math.max(0, natural - r.height - 40)));
+      need === 0 && shift !== 0 && apply(0);
+    },
+    schedule = () => {
+      for (let id of timers) clearTimeout(id);
+      timers = [0, 120, 300, 600, 1000].map((ms) => setTimeout(lift, ms));
+    };
+  listen(context, document, "focusin", (e) => {
+    let t = e.target;
+    if (!(t && t.matches && t.matches(".menu input[type=text], .menu input:not([type]), .menu input[type=search]"))) return;
+    field = t;
+    schedule();
+  }, void 0, !1);
+  listen(context, document, "focusout", () => {
+    for (let id of timers) clearTimeout(id);
+    timers = [setTimeout(() => (!document.activeElement || document.activeElement === document.body || !document.activeElement.matches("input")) && ((field = null), apply(0)), 150)];
+  }, void 0, !1);
+  if (window.visualViewport) {
+    listen(context, window.visualViewport, "resize", () => field && schedule(), void 0, !1);
+    listen(context, window.visualViewport, "scroll", () => field && lift(), void 0, !1);
+  }
+  return { lift, get shift() { return shift; } };
 }
 
 export { installViewport };

@@ -163,36 +163,74 @@ function createCharacterSelect(context, avatars, options = {}) {
   }
 
   // ---- preview stage: the model stands in the harbor, the title camera is moved to it
+  // Where the model stands: the nearest open ground to the player start where the sun really
+  // reaches it (a ray from its head, chest and knees toward the sun hits nothing), with the camera
+  // on the sun's side of it — the sun is behind the camera, so the model's front is lit.
+  function findLitSpot(p) {
+    let sun = (context.render && context.render.sunDir) || null,
+      ph = context.physics;
+    if (!sun || !ph || !ph.raycast || !ph.groundHeight) return null;
+    let sd = new Vector3(sun.x, sun.y, sun.z).normalize(),
+      hx = Math.hypot(sun.x, sun.z) || 1,
+      sx = sun.x / hx,
+      sz = sun.z / hx,
+      d = PREVIEW.distance,
+      origin = new Vector3(),
+      dir = new Vector3(),
+      cand = [];
+    for (let x = -60; x <= 60; x += 2) for (let z = -60; z <= 60; z += 2) cand.push([x, z, x * x + z * z]);
+    cand.sort((a, b) => a[2] - b[2]);
+    let ground = (x, z) => {
+      try {
+        return ph.groundHeight(x, z, p.y + 3);
+      } catch {
+        return null;
+      }
+    };
+    let blocked = (x, y, z, v, len) => !!ph.raycast(origin.set(x, y, z), v, len);
+    for (let [ox, oz] of cand) {
+      let x = p.x + ox,
+        z = p.z + oz,
+        g = ground(x, z);
+      if (g == null || Math.abs(g - p.y) > 1.2) continue;
+      // the camera spot, on the sun's side
+      let cx = x + sx * d,
+        cz = z + sz * d,
+        cg = ground(cx, cz);
+      if (cg == null || Math.abs(cg - g) > 0.6) continue;
+      // sunlit head, chest and knees
+      if (blocked(x, g + 1.7, z, sd, 90) || blocked(x, g + 1.0, z, sd, 90) || blocked(x, g + 0.4, z, sd, 90)) continue;
+      // open space round the model and a clear view from the camera spot to it
+      dir.set(-sx, 0, -sz);
+      if (blocked(cx, cg + 1.35, cz, dir, d) || blocked(cx, cg + 0.6, cz, dir, d)) continue;
+      let ring = !1;
+      for (let k = 0; k < 6 && !ring; k++) {
+        dir.set(Math.cos((k * Math.PI) / 3), 0, Math.sin((k * Math.PI) / 3));
+        ring = blocked(x, g + 1.0, z, dir, 0.7);
+      }
+      if (ring) continue;
+      return { x, z, g, cx, cz, cg };
+    }
+    return null;
+  }
+
   function placeStage() {
     let start = context.level && context.level.playerStart,
       p = (start && start.pos) || new Vector3(),
       yaw = (start && start.yaw) || 0,
-      sun = (context.render && context.render.sunDir) || null,
-      // The camera stays at the player start; the model stands on the far side of it from the sun,
-      // so the sun is behind the camera and lights the model's front (not the silhouette against
-      // the light). Try the sun-opposite direction first, then turn away in steps until the way is
-      // open (containers would put the model in shadow, or the camera in a wall); the start's own
-      // forward direction is the last resort.
-      base = sun && Math.hypot(sun.x, sun.z) > 0.01 ? Math.atan2(-sun.x, -sun.z) : Math.PI - yaw,
-      dirs = [];
-    for (let k of [0, 1, -1, 2, -2, 3, -3, 4, -4]) dirs.push(base + (k * Math.PI) / 7);
-    dirs.push(Math.PI + yaw);
-    let pick = null;
-    for (let a of dirs) {
-      let dx = Math.sin(a),
-        dz = Math.cos(a),
-        clear = !0;
-      try {
-        for (let h of [0.4, 1.0, 1.6])
-          context.physics.raycast(new Vector3(p.x, p.y + h, p.z), new Vector3(dx, 0, dz), PREVIEW.distance + 1.2) && (clear = !1);
-      } catch {}
-      if (clear) {
-        pick = { dx, dz };
-        break;
-      }
+      spot = null;
+    try {
+      spot = findLitSpot(p);
+    } catch {}
+    if (spot) {
+      stage.set(spot.x, spot.g, spot.z);
+      eye.set(spot.cx, spot.cg + 1.35, spot.cz);
+      look.set(spot.x, spot.g + 1.0, spot.z);
+      return;
     }
-    pick || (pick = { dx: -Math.sin(yaw), dz: -Math.cos(yaw) });
-    stage.set(p.x + pick.dx * PREVIEW.distance, 0, p.z + pick.dz * PREVIEW.distance);
+    let fx = -Math.sin(yaw),
+      fz = -Math.cos(yaw);
+    stage.set(p.x + fx * PREVIEW.distance, 0, p.z + fz * PREVIEW.distance);
     try {
       stage.y = context.physics.groundHeight(stage.x, stage.z, p.y + 1);
     } catch {

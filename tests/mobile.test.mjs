@@ -375,6 +375,27 @@ await test("Home Screen app on a 402x874 phone: the app box holds one height thr
   assert(a.length === 1 && a[0] === "402x874", "back to portrait: one stable size", a);
 });
 
+await test("landscape: the on-screen keyboard over the callsign field lifts the menu; it settles back afterwards", async () => {
+  const page = await phone("&noinstall=1", spoof(IPHONE));
+  pages.push(page);
+  await metrics(page, 844, 390);
+  await sleep(400);
+  await tap(page, 400, 200);
+  await page.ev(`document.querySelector('.menu [data-act="brawl"]').click()`);
+  await page.waitFor(`__G.game.menus.screen === "brawl"`, 3000);
+  await sleep(600); // the menu puts its own focus on the first button a moment after the screen opens
+  const before = await page.ev(`return document.querySelector('[data-f="br-name"]').getBoundingClientRect().bottom`);
+  // a keyboard of about 200 px: the visual viewport shrinks to 190 px
+  await page.ev(`Object.defineProperty(window, "visualViewport", { configurable: true, value: { width: innerWidth, height: 190, offsetTop: 0, offsetLeft: 0, scale: 1, addEventListener() {}, removeEventListener() {} } }); document.querySelector('[data-f="br-name"]').focus()`);
+  await sleep(1300);
+  const lifted = await page.ev(`const r = document.querySelector('[data-f="br-name"]').getBoundingClientRect(); return { bottom: r.bottom, up: document.querySelector(".menu").classList.contains("kb-up"), active: document.activeElement.dataset.f || document.activeElement.tagName, ih: innerHeight, vv: window.visualViewport.height }`);
+  assert(lifted.up && lifted.bottom <= 190 - 56 + 1, "the field ends above the keyboard and its assist bar", { before, lifted });
+  await page.ev(`document.querySelector('[data-f="br-name"]').blur(); Object.defineProperty(window, "visualViewport", { configurable: true, value: { width: innerWidth, height: innerHeight, offsetTop: 0, offsetLeft: 0, scale: 1, addEventListener() {}, removeEventListener() {} } })`);
+  await sleep(700);
+  const after = await page.ev(`return { bottom: document.querySelector('[data-f="br-name"]').getBoundingClientRect().bottom, up: document.querySelector(".menu").classList.contains("kb-up") }`);
+  assert(!after.up && Math.abs(after.bottom - before) < 2, "back in place once the keyboard is gone", { before, after });
+});
+
 await test("touch ids may be negative (iOS 26) and a finger that vanished without a touchend does not lock the left stick", async () => {
   const page = await phone("&noinstall=1", spoof(IPHONE));
   pages.push(page);
