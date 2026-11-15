@@ -167,11 +167,32 @@ function createCharacterSelect(context, avatars, options = {}) {
     let start = context.level && context.level.playerStart,
       p = (start && start.pos) || new Vector3(),
       yaw = (start && start.yaw) || 0,
-      fx = -Math.sin(yaw),
-      fz = -Math.cos(yaw),
-      rx = Math.cos(yaw),
-      rz = -Math.sin(yaw);
-    stage.set(p.x + fx * PREVIEW.distance + rx * PREVIEW.side, 0, p.z + fz * PREVIEW.distance + rz * PREVIEW.side);
+      sun = (context.render && context.render.sunDir) || null,
+      // The camera stays at the player start; the model stands on the far side of it from the sun,
+      // so the sun is behind the camera and lights the model's front (not the silhouette against
+      // the light). Try the sun-opposite direction first, then turn away in steps until the way is
+      // open (containers would put the model in shadow, or the camera in a wall); the start's own
+      // forward direction is the last resort.
+      base = sun && Math.hypot(sun.x, sun.z) > 0.01 ? Math.atan2(-sun.x, -sun.z) : Math.PI - yaw,
+      dirs = [];
+    for (let k of [0, 1, -1, 2, -2, 3, -3, 4, -4]) dirs.push(base + (k * Math.PI) / 7);
+    dirs.push(Math.PI + yaw);
+    let pick = null;
+    for (let a of dirs) {
+      let dx = Math.sin(a),
+        dz = Math.cos(a),
+        clear = !0;
+      try {
+        for (let h of [0.4, 1.0, 1.6])
+          context.physics.raycast(new Vector3(p.x, p.y + h, p.z), new Vector3(dx, 0, dz), PREVIEW.distance + 1.2) && (clear = !1);
+      } catch {}
+      if (clear) {
+        pick = { dx, dz };
+        break;
+      }
+    }
+    pick || (pick = { dx: -Math.sin(yaw), dz: -Math.cos(yaw) });
+    stage.set(p.x + pick.dx * PREVIEW.distance, 0, p.z + pick.dz * PREVIEW.distance);
     try {
       stage.y = context.physics.groundHeight(stage.x, stage.z, p.y + 1);
     } catch {
