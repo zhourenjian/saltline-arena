@@ -569,6 +569,7 @@ function createInput(context) {
       (f.sprint = r && L),
       (f.crouch = r && n.has("crouch")));
   }
+  f.debug = () => ({ H, O, w, q, r, jc });
   function B() {
     (s.clear(), (f.look.dx = 0), (f.look.dy = 0));
   }

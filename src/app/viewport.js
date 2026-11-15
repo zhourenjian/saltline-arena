@@ -22,13 +22,25 @@ function installViewport(context) {
     size = "",
     app = null,
     pending = [],
-    settle = () => {
+    why = "init",
+    lastRaw = "",
+    events = [],
+    settle = (reason) => {
+      typeof reason == "string" && (why = reason);
       // the layout box of #app (position: fixed; inset: 0) is the truth: it follows the real visible
       // area, including the home-indicator strip, where innerHeight can come up short
       let vv = window.visualViewport,
         box = app || (app = document.getElementById("app")),
         w = Math.round((box && box.clientWidth) || window.innerWidth || (vv && vv.width) || 0),
         h = Math.round((box && box.clientHeight) || window.innerHeight || (vv && vv.height) || 0);
+      // every distinct set of numbers, with what triggered the measurement (see ?vpdebug=1)
+      let vvh = vv ? Math.round(vv.height) : -1,
+        raw = [window.innerWidth, window.innerHeight, vvh, root.clientHeight, w, h, screen.availHeight].join("/");
+      if (raw !== lastRaw) {
+        lastRaw = raw;
+        let line = `[vp] ${why} inner=${window.innerWidth}x${window.innerHeight} vv=${vv ? Math.round(vv.width) + "x" + vvh + "@" + Math.round(vv.offsetTop) : "-"} html=${root.clientWidth}x${root.clientHeight} app=${w}x${h} screen=${screen.width}x${screen.height} avail=${screen.availWidth}x${screen.availHeight} standalone=${isStandalone()} scroll=${window.scrollY}`;
+        (events.push(line), events.length > 6 && events.shift(), console.log(line));
+      }
       if (!w || !h) return;
       if (window.scrollX || window.scrollY) window.scrollTo(0, 0);
       // Home Screen app: some iOS versions end the layout viewport above the home-indicator strip,
@@ -59,17 +71,18 @@ function installViewport(context) {
       root.style.setProperty("--vh", h + "px");
       window.dispatchEvent(new Event("saltline-viewport"));
     },
-    measure = () => {
-      settle();
+    measure = (e) => {
+      let base = (e && e.type) || "measure";
+      settle(base);
       // the numbers keep changing for a moment after a rotation or a toolbar change
       for (let id of pending) clearTimeout(id);
-      pending = [60, 160, 320, 600, 1000, 1600].map((ms) => setTimeout(settle, ms));
-      requestAnimationFrame(() => requestAnimationFrame(settle));
+      pending = [60, 160, 320, 600, 1000, 1600].map((ms) => setTimeout(() => settle(`${base}+${ms}ms`), ms));
+      requestAnimationFrame(() => requestAnimationFrame(() => settle(`${base}+raf`)));
     };
   for (let type of ["resize", "orientationchange", "pageshow", "focus"]) listen(context, window, type, measure, void 0, !1);
   window.visualViewport && listen(context, window.visualViewport, "resize", measure, void 0, !1);
   screen.orientation && listen(context, screen.orientation, "change", measure, void 0, !1);
-  listen(context, document, "visibilitychange", () => document.visibilityState === "visible" && measure(), void 0, !1);
+  listen(context, document, "visibilitychange", () => document.visibilityState === "visible" && measure({ type: "visible" }), void 0, !1);
   // no pinch / double-tap zoom, and no rubber-band scrolling of the page behind the game
   for (let type of ["gesturestart", "gesturechange", "gestureend"]) listen(context, document, type, (e) => e.preventDefault(), { passive: !1 }, !1);
   listen(context, window, "scroll", () => (window.scrollX || window.scrollY) && window.scrollTo(0, 0), void 0, !1);
@@ -80,6 +93,18 @@ function installViewport(context) {
     let box = document.createElement("pre");
     box.style.cssText = "position:fixed;left:6px;top:70px;z-index:99;margin:0;padding:4px 6px;font:10px/1.3 monospace;color:#9f9;background:rgba(0,0,0,.7);pointer-events:none;white-space:pre";
     document.body.appendChild(box);
+    let inputLine = () => {
+      let g = window.__G || {},
+        i = g.input,
+        p = g.player;
+      if (!i || !p) return "input -";
+      let d = i.debug ? i.debug() : {};
+      return [
+        `stick H${(d.H || 0).toFixed(2)} O${(d.O || 0).toFixed(2)} w${d.w} q${d.q} gp${+!!i.gamepad} r${+!!d.r} crouchT${+!!d.jc}`,
+        `move ${i.move.x.toFixed(2)},${i.move.y.toFixed(2)} sprint${+!!i.sprint} spd${(p.speed || 0).toFixed(2)} gnd${+!!p.onGround} crch${+!!p.crouching} en${+!!p.enabled} alive${+!!p.alive}`,
+        `pos ${p.pos.x.toFixed(1)},${p.pos.y.toFixed(1)},${p.pos.z.toFixed(1)} dt${((g.time && g.time.dt) || 0).toFixed(3)} frame${g.time && g.time.frame} cap${g.frameCap}`,
+      ].join("\n");
+    };
     let show = () => {
       let vv = window.visualViewport,
         a = document.getElementById("app");
@@ -89,6 +114,8 @@ function installViewport(context) {
         `screen ${screen.width}x${screen.height} avail ${screen.availWidth}x${screen.availHeight}`,
         `standalone ${isStandalone()}  fill ${root.style.getPropertyValue("--fill") || 0}  capped ${root.classList.contains("vp-capped")}`,
         `sab ${getComputedStyle(root).getPropertyValue("--sab")} sat ${getComputedStyle(root).getPropertyValue("--sat")}`,
+        inputLine(),
+        ...events.slice(-3).map((l) => l.slice(5, 120)),
       ].join("\n");
     };
     setInterval(show, 500);
