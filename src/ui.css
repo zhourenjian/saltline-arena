@@ -2900,3 +2900,38 @@ html.is-standalone #app {
   width: var(--vw, 100%);
   height: var(--vh, 100%);
 }
+
+/* phone held sideways: the screen is short, so the ammo readout gets smaller and the thumb
+   cluster sits a little lower, keeping JUMP clear of the readout */
+@media (orientation: landscape) and (max-height: 520px) {
+  .is-touch .h-ammo {
+    top: calc(56px + var(--sat));
+  }
+  .is-touch .h-cue {
+    height: 12px;
+    font-size: 10px;
+    line-height: 12px;
+  }
+  .is-touch .h-ammo-n {
+    font-size: 32px;
+  }
+  .is-touch .h-ammo-r {
+    font-size: 12px;
+  }
+  .is-touch .h-pips {
+    margin: 4px 0 3px;
+  }
+  .is-touch .h-wname {
+    font-size: 10px;
+  }
+  .is-touch .t-jump {
+    bottom: calc(146px + var(--sab));
+  }
+  .is-touch .t-crouch {
+    right: calc(204px + var(--sar));
+    bottom: calc(158px + var(--sab));
+  }
+  .is-touch .h-health {
+    top: calc(112px + var(--sat));
+  }
+}

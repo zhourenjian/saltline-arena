@@ -34,13 +34,13 @@ function installViewport(context) {
         w = Math.round(window.innerWidth || (vv && vv.width) || 0),
         ih = Math.round(window.innerHeight || (vv && vv.height) || 0),
         h = ih;
-      // every distinct set of numbers, with what triggered the measurement (see ?vpdebug=1)
+      // every distinct set of numbers, with what triggered the measurement (shown by ?vpdebug=1)
       let vvh = vv ? Math.round(vv.height) : -1,
         raw = [window.innerWidth, window.innerHeight, vvh, root.clientHeight, w, h, app && app.clientHeight, root.style.getPropertyValue("--fill")].join("/");
       if (raw !== lastRaw) {
         lastRaw = raw;
         let line = `[vp] ${why} inner=${window.innerWidth}x${window.innerHeight} vv=${vv ? Math.round(vv.width) + "x" + vvh + "@" + Math.round(vv.offsetTop) : "-"} html=${root.clientWidth}x${root.clientHeight} calc=${w}x${h} appbox=${(app || (app = document.getElementById("app"))).clientWidth}x${app.clientHeight} fill=${root.style.getPropertyValue("--fill") || 0} screen=${screen.width}x${screen.height} avail=${screen.availWidth}x${screen.availHeight} standalone=${isStandalone()} scroll=${window.scrollY}`;
-        (events.push(line), events.length > 6 && events.shift(), console.log(line));
+        (events.push(line), events.length > 6 && events.shift());
       }
       if (!w || !h) return;
       if (window.scrollX || window.scrollY) window.scrollTo(0, 0);
@@ -88,16 +88,6 @@ function installViewport(context) {
   // ?vpdebug=1 prints the numbers on screen, for reporting layout problems from a real device
   let dbg = /[?&]vpdebug=1/.test(location.search);
   try { dbg = dbg || localStorage.getItem("saltline.vpdebug") === "1"; } catch {}
-  // while a finger is on the left stick, say what the input and the player are doing (console)
-  let tick = 0,
-    stickLog = setInterval(() => {
-    let g = window.__G || {},
-      d = g.input && g.input.debug ? g.input.debug() : null;
-    tick++;
-    // touch devices: a status line every 3 s even when the stick is idle (or not recognised)
-    d && g.input.touch && tick % 6 === 0 && console.log(`[input] touch w=${d.w} q=${d.q} r=${d.r} crouchT=${d.jc} stick=${!!document.querySelector(".t-stick.on")} state=${g.game && g.game.state} mode=${g.game && g.game.mode} player=${!!g.player} en=${g.player && g.player.enabled}`);
-    d && d.w !== null && g.player && console.log(`[stick] H=${d.H.toFixed(2)} O=${d.O.toFixed(2)} r=${d.r} move=${g.input.move.x.toFixed(2)},${g.input.move.y.toFixed(2)} spd=${(g.player.speed || 0).toFixed(2)} gnd=${g.player.onGround} crouch=${g.player.crouching} en=${g.player.enabled} pos=${g.player.pos.x.toFixed(1)},${g.player.pos.z.toFixed(1)} dt=${g.time && g.time.dt} state=${g.game && g.game.state}`);
-  }, 500);
   if (dbg) {
     let box = document.createElement("pre");
     box.style.cssText = "position:fixed;left:6px;top:70px;z-index:99;margin:0;padding:4px 6px;font:10px/1.3 monospace;color:#9f9;background:rgba(0,0,0,.7);pointer-events:none;white-space:pre";
