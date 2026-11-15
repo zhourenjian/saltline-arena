@@ -25,11 +25,46 @@ import { SHOWCASE_MODULES } from "./showcases.js";
 import { showFatalError } from "./diagnostics.js";
 import { bootElement, setBootProgress } from "./boot-screen.js";
 import { enableBenchmark } from "./benchmark.js";
+import { installViewport } from "./viewport.js";
+import { createInstallGuide } from "../ui/install-guide.js";
 import { createShowcaseInput, createShowcasePlayer } from "./showcase-stubs.js";
 
-async function startGame() {
-  let params = Object.fromEntries(new URLSearchParams(location.search)),
-    benchmark = !!params.bench || location.hash === "#bench";
+// One world instance: boot() builds every system in the original order, frame(seconds) is the
+// original per-frame body (driven by whoever owns the loop: the standalone bridge or a DuoWorld
+// host), teardown() releases what boot() created. There is exactly one loop body.
+function createWorldRuntime(options = {}) {
+  let context = null,
+    frame = null,
+    booted = !1,
+    tornDown = !1;
+  async function boot() {
+    if (booted) throw new Error("world runtime already booted");
+    booted = !0;
+    context = await bootSystems(options, (h) => (frame = h));
+    return context;
+  }
+  function teardown() {
+    if (tornDown || !context) return;
+    ((tornDown = !0), (frame = null), disposeContext(context));
+  }
+  return {
+    boot,
+    teardown,
+    frame(seconds) {
+      frame && !tornDown && frame(seconds);
+    },
+    get context() {
+      return context;
+    },
+  };
+}
+
+async function bootSystems(options, setFrame) {
+  let params =
+      options.params ||
+      Object.fromEntries(new URLSearchParams(location.search)),
+    benchmark =
+      !!params.bench || (!options.params && location.hash === "#bench");
   benchmark && ((params.noaudio = "1"), (params.autostart = "1"));
   let context = {
     THREE: THREE,
@@ -43,8 +78,15 @@ async function startGame() {
       real: 0,
     },
     quality: chooseQuality(params.q || (params.shot ? "test" : "")),
+    lifetime: options.lifetime || null,
+    // World-owned extension point: fn(dt, simulated) after player/weapon/enemies each frame
+    frameHooks: [],
+    // 0 = every display frame; ?fps=30 forces a cap, and the renderer sets 30 on a phone that cannot keep up
+    frameCap: params.fps ? Math.max(0, Math.min(120, +params.fps || 0)) : 0,
   };
-  window.__G = context;
+  ((window.__G = context), (window.__frames = 0), (window.__ready = !1));
+  // standalone page only: an embedding host owns the layout of its own container
+  !options.params && (context.viewport = installViewport(context));
   let showcaseName =
     params.show && SHOWCASE_MODULES[params.show] ? params.show : null;
   context.showcase = showcaseName;
@@ -200,7 +242,9 @@ async function startGame() {
         createEnemies(context),
       ),
       await initializeSystem("hud", "hud", () => createHUD(context)),
-      (context.game = createGameFlow(context)));
+      (context.game = createGameFlow(context)),
+      // standalone page only (a hosting World does not own the browser chrome)
+      !options.params && (context.installGuide = createInstallGuide(context)));
   }
   await setBootProgress("Waiting for first light", 0.92);
   try {
@@ -235,13 +279,14 @@ async function startGame() {
     context.weapon.setVisible &&
     context.weapon.setVisible(!1),
     benchmark && enableBenchmark(context),
-    await setBootProgress("Ready", 1),
-    bootElement.classList.add("done"),
-    setTimeout(() => {
-      bootElement.hidden = !0;
+    await setBootProgress("Ready", 1));
+  let boot = bootElement();
+  boot &&
+    (boot.classList.add("done"),
+    (context.lifetime ? context.lifetime.timeout : setTimeout)(() => {
+      boot.hidden = !0;
     }, 700));
-  let previousFrameTime = performance.now(),
-    weaponWetness = 1,
+  let weaponWetness = 1,
     updateSystem = (h, f) => {
       let p = context[h];
       if (p && p.update)
@@ -254,13 +299,12 @@ async function startGame() {
         }
     };
   ((updateSystem.err = {}),
-    context.renderer.setAnimationLoop(() => {
+    setFrame((seconds) => {
       let h = performance.now(),
-        f = (h - previousFrameTime) / 1e3;
-      ((previousFrameTime = h),
-        (averageFrameSeconds = averageFrameSeconds
-          ? averageFrameSeconds * 0.95 + f * 0.05
-          : f));
+        f = Math.max(0, +seconds || 0);
+      averageFrameSeconds = averageFrameSeconds
+        ? averageFrameSeconds * 0.95 + f * 0.05
+        : f;
       let p = Math.min(f, 0.05);
       (params.dt && (p = +params.dt),
         (context.time.dt = p),
@@ -295,6 +339,14 @@ async function startGame() {
           (updateSystem("player", p),
           updateSystem("weapon", p),
           updateSystem("enemies", p));
+      for (let v of context.frameHooks)
+        try {
+          v(p, d);
+        } catch (g) {
+          updateSystem.err.hook ||
+            ((updateSystem.err.hook = 1),
+            console.error("[loop] frame hook threw: " + ((g && g.stack) || g)));
+        }
       if (
         context.weapon &&
         context.weapon.setWetness &&
@@ -339,6 +391,69 @@ async function startGame() {
         window.__frames++,
         window.__frames === 2 && (window.__ready = !0));
     }));
+  return context;
 }
 
-export { startGame };
+// Releases everything one boot created: listeners/timers (lifetime), audio, GPU resources and the
+// WebGL context, and the diagnostic globals that point at this instance.
+function disposeContext(context) {
+  try {
+    context.lifetime && context.lifetime.dispose();
+  } catch {}
+  try {
+    document.pointerLockElement && document.exitPointerLock();
+  } catch {}
+  try {
+    let a = context.audio && context.audio.ctx;
+    a && a.state !== "closed" && a.close().catch(() => {});
+  } catch {}
+  let renderer = context.renderer,
+    scene = context.scene,
+    seen = new Set(),
+    free = (h) => {
+      if (!h || seen.has(h) || typeof h.dispose != "function") return;
+      seen.add(h);
+      try {
+        h.dispose();
+      } catch {}
+    };
+  scene &&
+    scene.traverse((h) => {
+      free(h.geometry);
+      for (let f of h.material
+        ? Array.isArray(h.material)
+          ? h.material
+          : [h.material]
+        : []) {
+        if (!f) continue;
+        for (let p in f) {
+          let d = f[p];
+          d && d.isTexture && free(d);
+        }
+        if (f.uniforms)
+          for (let p in f.uniforms) {
+            let d = f.uniforms[p] && f.uniforms[p].value;
+            d && d.isTexture && free(d);
+          }
+        free(f);
+      }
+    });
+  if (renderer) {
+    try {
+      renderer.setAnimationLoop(null);
+    } catch {}
+    try {
+      renderer.dispose();
+    } catch {}
+    try {
+      renderer.forceContextLoss();
+    } catch {}
+  }
+  for (let h of ["__G", "__stats", "__setShot"])
+    try {
+      delete window[h];
+    } catch {}
+  context.frameHooks.length = 0;
+}
+
+export { createWorldRuntime };

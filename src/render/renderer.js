@@ -1,4 +1,5 @@
 // Scene, cameras, renderer lifecycle and render passes.
+import { listen } from "../core/lifetime.js";
 import {
   ACESFilmicToneMapping,
   BoxGeometry,
@@ -278,7 +279,12 @@ async function createRenderer(context) {
     settle: 3.5,
     upWait: 4,
     upDelay: 4,
+    // phones and tablets: a lower floor for the dynamic resolution, and the 30 fps fallback above
+    touch: !!(window.matchMedia && window.matchMedia("(pointer: coarse)").matches),
+    capHits: 0,
+    min: 0.6,
   };
+  S.min = S.touch ? 0.45 : 0.6;
   function z(ie) {
     if (!S.enabled || !_ || ie > 1500) return;
     if (((S.settle -= ie / 1e3), (S.upWait -= ie / 1e3), S.settle > 0)) {
@@ -288,17 +294,19 @@ async function createRenderer(context) {
     if (((S.acc += ie), S.n++, S.n < 45 && S.acc < 900)) return;
     let F = S.acc / S.n;
     ((S.acc = 0), (S.n = 0));
+    // with a frame cap the interval between frames is the cap's, not what the GPU needs
+    context.frameCap && (F = Math.max(1000 / 60, F - (1000 / context.frameCap - 1000 / 60)));
     let X = S.scale;
     if (
-      (F > 21.5 && X > 0.6
-        ? ((X = F > 45 ? 0.6 : Math.max(0.6, X - (F > 30 ? 0.2 : 0.1))),
+      (F > 21.5 && X > S.min
+        ? ((X = F > 45 ? S.min : Math.max(S.min, X - (F > 30 ? 0.2 : 0.1))),
           (S.upDelay = Math.min(60, S.upDelay * 2)),
           (S.upWait = S.upDelay))
         : F < 17.4 && X < 1 && S.upWait <= 0
           ? ((X = Math.min(1, X + 0.1)), (S.upWait = 2))
           : F < 17.4 && X >= 1 && (S.upDelay = 4),
       (X = Math.round(X * 10) / 10),
-      X <= 0.6 && F > 26)
+      X <= S.min && F > 26)
     ) {
       S.floorHits = (S.floorHits || 0) + 1;
       let ne = {
@@ -328,6 +336,19 @@ async function createRenderer(context) {
         return;
       }
     } else S.floorHits = 0;
+    // a phone that heats up and cannot hold 60 even at the lowest quality and resolution: a steady
+    // 30 fps (every second display frame) is smoother and cooler than a wavering 40
+    if (S.touch && context.quality.name === "low" && !context.frameCap && X <= S.min && F > 22) {
+      if (++S.capHits >= 3) {
+        ((context.frameCap = 30), (S.capHits = 0), (S.scale = 0.8), (S.settle = 2), (S.upDelay = 4), (X = S.scale));
+        console.log("[render] frame time " + F.toFixed(0) + " ms at the lowest settings: capping at 30 fps");
+        try {
+          context.events.emit("perf:framecap", { fps: 30 });
+        } catch {}
+        N.resize();
+        return;
+      }
+    } else S.capHits = 0;
     X !== S.scale && ((S.scale = X), (S.settle = 1), N.resize());
   }
   let H = [],
@@ -670,7 +691,8 @@ async function createRenderer(context) {
   }
   ((N.captureInteriorProbe = K),
     N.resize(),
-    window.addEventListener("resize", () => N.resize()));
+    listen(context, window, "resize", () => N.resize(), void 0, !1),
+    listen(context, window, "saltline-viewport", () => N.resize(), void 0, !1));
   try {
     let ie = new MeshStandardMaterial({
         color: 8421504,

@@ -10,8 +10,13 @@ function chooseQuality(i) {
     (navigator.maxTouchPoints > 1 &&
       Math.min(screen.width, screen.height) < 900)
   )
+    // phones: cheaper still than the shared low preset (smaller shadow map, fewer volumetric
+    // steps, less rain) because they throttle after a few minutes
     return {
       ...QUALITY_PRESETS.low,
+      shadow: 1024,
+      volSteps: 8,
+      rain: 0.35,
     };
   let t = "";
   try {

@@ -637,7 +637,8 @@ var Jt = {
 
 var IA = 6;
 
-var x3 = new Map();
+// container templates per material library (WeakMap: released with the world that built them)
+var x3 = new WeakMap();
 
 var y3 = 0.178;
 

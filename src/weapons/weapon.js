@@ -14,6 +14,7 @@ import { vf, zc } from "../core/config.js";
 import { clamp, damp, lerp, saturate } from "../core/math.js";
 import { Kc, mi, w_ } from "./geometry.js";
 import { Bf, F_, N_, U_, Vv, Wv } from "./rig.js";
+import { registerGunKit } from "./held-gun.js";
 
 var weaponShowcaseModule = {};
 
@@ -60,6 +61,11 @@ var W_ = 2.1;
 
 var G_ = 2.72;
 
+// first-person arms: default fabric colour, and the material the worn character's sleeve colour is set on
+var ARM_DEFAULT = 2303530;
+// the original arms' fabric albedo (what swat-operator declares as firstPersonArms); setArmColors scales from it
+var ARM_REF = { sleeve: "#23262a", glove: "#23262a" };
+
 var Yo = (i) => ((i = saturate(i)), i * i * i * (i * (6 * i - 15) + 10));
 
 var pa = (i, e) => ({
@@ -80,6 +86,7 @@ function ma(i, e, t) {
 var i0 = (i, e, t, n = "XYZ") => new fm().setFromEuler(new Euler(i, e, t, n));
 
 async function createWeapon(context) {
+  let armMaterial = null;
   let e = new Group();
   e.name = "viewmodel-pac9";
   let t = w_(),
@@ -149,6 +156,8 @@ async function createWeapon(context) {
   f.position.copy(p);
   let d = o(t.round, s("brass"));
   (f.add(o(t.mag, u), d), e.add(f));
+  // the same parts, for the gun other people see in this player's (and every other player's) hands
+  registerGunKit(context, { geo: t, mats: { ano: r, gun: l, poly: c, plain: a, mag: u, brass: d.material } });
   let v = null,
     g = null,
     x = null;
@@ -230,7 +239,10 @@ async function createWeapon(context) {
     A.position
       .fromArray(mi.grip)
       .sub(new gi(0.006, -0.031, -0.085).applyQuaternion(b)));
-  let _ = s("glove_fabric");
+  // the arms' own fabric (an explicit colour keeps it out of the shared material cache): the worn
+  // character's sleeve colour is applied to it (setArmColor)
+  let _ = context.mats.get("glove_fabric", { triplanar: !0, vertexColors: !0, scale: n.glove_fabric, color: ARM_DEFAULT });
+  armMaterial = _;
   A.add(o(m.fabric, _));
   let M = o(m.index[0].clone(), _);
   (A.add(M), e.add(A));
@@ -442,8 +454,58 @@ async function createWeapon(context) {
       },
       muzzleWorld: Re,
       reloadNow: Fe,
+      // What the hands are doing with the gun, for the third-person body and for other players:
+      // a = 0 none | 1 reload | 2 inspect, t = seconds into it, empty = reload from an empty magazine.
+      heldAction(out = {}) {
+        k.reload
+          ? ((out.a = 1), (out.t = k.reload.t), (out.empty = !!k.reload.empty))
+          : k.inspect >= 0
+            ? ((out.a = 2), (out.t = k.inspect), (out.empty = !1))
+            : ((out.a = 0), (out.t = 0), (out.empty = !1));
+        return out;
+      },
+      inspectNow() {
+        return k.reload || k.inspect >= 0 ? !1 : ((k.inspect = 0), !0);
+      },
       addAmmo(Me) {
         ve.reserve += Me;
+      },
+      get infiniteAmmo() {
+        return infinite();
+      },
+      // Sleeve and glove fabric of the first-person arms, so they match the worn character's outfit:
+      // { sleeve, glove } as #rrggbb (either may be omitted); null = the original dark navy.
+      // The fabric is vertex-coloured, so each colour is a per-channel ratio against the original
+      // (sleeve vertices are the bluish ones, glove vertices the rest) written into a copy of
+      // the vertex colours; the original arms are ratio 1.
+      armColors: null, // the last colours applied (null = original)
+      setArmColors(c) {
+        this.armColors = c ? { sleeve: c.sleeve || null, glove: c.glove || null } : null;
+        if (!armMaterial) return;
+        // ratios in sRGB steps (not linear light): a perceptual scale keeps khaki khaki instead of
+        // blowing the fabric out, since the vertex colours already carry the weave's brightness
+        let to8 = (hex) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) || 1),
+          ratio = (hex, ref) => {
+            if (!hex) return [1, 1, 1];
+            let t = to8(hex),
+              r = to8(ref);
+            return t.map((v, i) => v / r[i]).map((v) => Math.min(v, 12));
+          },
+          rs = ratio(c && c.sleeve, ARM_REF.sleeve),
+          rg = ratio(c && c.glove, ARM_REF.glove);
+        e.traverse((o) => {
+          if (!o.isMesh || o.material !== armMaterial || !o.geometry.attributes.color) return;
+          let a = o.geometry.attributes.color;
+          o.userData.arm0 || (o.userData.arm0 = a.array.slice());
+          let src = o.userData.arm0;
+          for (let i = 0; i < a.count; i++) {
+            let r = src[i * 3],
+              b = src[i * 3 + 2],
+              k = b > r ? rs : rg;
+            a.setXYZ(i, r * k[0], src[i * 3 + 1] * k[1], b * k[2]);
+          }
+          a.needsUpdate = !0;
+        });
       },
       setWetness(Me) {
         Wv.value = Math.max(0, Math.min(1, +Me || 0));
@@ -516,8 +578,10 @@ async function createWeapon(context) {
   function Re(Me = new gi()) {
     return Pe(mi.muzzle, Me);
   }
+  // Brawl is free for all with unlimited ammunition: reloads never run dry and nothing is deducted
+  const infinite = () => !!(context.game && context.game.mode === "brawl");
   function Fe() {
-    if (k.reload || ve.ammo >= ve.magSize || ve.reserve <= 0) return !1;
+    if (k.reload || ve.ammo >= ve.magSize || (ve.reserve <= 0 && !infinite())) return !1;
     let Me = ve.ammo <= 0;
     return (
       (k.reload = {
@@ -616,10 +680,10 @@ async function createWeapon(context) {
       return;
     }
     k.t += Me;
-    let Oe = !!be.fire && e.visible && !ce.noFire,
+    let Oe = !!be.fire && e.visible && !ce.noFire && !we.climbing && we.enabled !== !1 && we.alive !== !1,
       pt = Oe && !k.prevFire;
     ((k.prevFire = Oe), Oe || (k.dryDone = !1));
-    let ut = !!we.sprinting && !Oe && !be.ads && !k.reload;
+    let ut = (!!we.sprinting || !!we.climbing) && !Oe && !be.ads && !k.reload;
     ((k.sprintT = damp(k.sprintT, ut ? 1 : 0, 9, Me)),
       be.pressed && be.pressed("reload") && Fe(),
       k.autoReload >= 0 && ((k.autoReload -= Me), k.autoReload < 0 && Fe()));
@@ -653,8 +717,8 @@ async function createWeapon(context) {
         Vt("magin", ee))
       ) {
         k.bump.v += 0.55;
-        let Tt = Math.min(ve.magSize - ve.ammo, ve.reserve);
-        ((ve.ammo += Tt), (ve.reserve -= Tt), Je.empty || (k.boltLocked = !1));
+        let Tt = infinite() ? ve.magSize - ve.ammo : Math.min(ve.magSize - ve.ammo, ve.reserve);
+        ((ve.ammo += Tt), infinite() || (ve.reserve -= Tt), Je.empty || (k.boltLocked = !1));
       }
       (Pt >= 1.5 && !Je.f.tap && ((Je.f.tap = 1), (k.bump.v += 0.4)),
         Je.empty &&
@@ -702,7 +766,7 @@ async function createWeapon(context) {
           ((k.dryDone = !0),
           context.events.emit("weapon:dry", {}),
           (k.bump.v -= 0.08),
-          ve.reserve > 0 && (k.autoReload = 0.32));
+          (ve.reserve > 0 || infinite()) && (k.autoReload = 0.32));
     (k.cooldown < 0 && (k.cooldown = Math.max(k.cooldown, -0.001)),
       k.t - k.lastShot > 0.24 &&
         (k.burst > 0 && (k.recPhase = ae() * 6.28), (k.burst = 0)),

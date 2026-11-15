@@ -1,4 +1,5 @@
 // Mission progression, relay objectives, waves, extraction and game states.
+import { listen } from "../core/lifetime.js";
 import { Vector3 } from "../vendor/three-r180.js";
 import { clamp, damp, saturate, smoothstep } from "../core/math.js";
 import { createMenus } from "../ui/menus.js";
@@ -107,6 +108,9 @@ function createGameFlow(context) {
             quick: !0,
           }));
       },
+      quit() {
+        toTitle();
+      },
     });
   l.applySettings();
   let c = {
@@ -140,6 +144,11 @@ function createGameFlow(context) {
     A = () => (s && s.objectives) || [],
     _ = {
       state: "title",
+      // "mission" (the original single-player game), "versus" (1v1, src/versus/versus.js) or
+      // "brawl" (free-for-all, src/brawl/brawl.js)
+      mode: "mission",
+      // set by brawl.js while its chat box has focus (losing pointer lock then is not a pause)
+      keepPlayingOnUnlock: !1,
       flow: GAME_FLOW,
       run: c,
       menus: l,
@@ -156,6 +165,43 @@ function createGameFlow(context) {
         j(!1);
       },
       update: B,
+      // 1v1: start on a server-chosen spawn pose { pos: Vector3, yaw }. No relays, no machines.
+      startVersus(pose, mode = "versus") {
+        ((_.mode = mode === "brawl" ? "brawl" : "versus"),
+          l.show("none"),
+          l.locationCard(!1),
+          a(context.audio, "setPaused", !1),
+          a(context.audio, "setIntensity", 0.6),
+          H(),
+          pose && n.reset(pose),
+          a(context.weapon, "setVisible", !0),
+          (g = !1),
+          (e.fade = 0),
+          T());
+      },
+      // 1v1: back to life at a new spawn after a death
+      respawn(pose) {
+        (n.reset(pose || s.playerStart),
+          a(context.weapon, "reset"),
+          (e.saturation = t),
+          (e.flash = 0),
+          (n.enabled = _.state === "playing"));
+      },
+      // 1v1: match finished; the versus module fills the result screen
+      endVersus() {
+        _.state === "title" ||
+          (r.setGameplay && r.setGameplay(!1),
+          r.exitLock(),
+          (n.enabled = !1),
+          o.setPrompt && o.setPrompt(null),
+          o.show(!1),
+          l.show("vs-result"),
+          a(context.audio, "setIntensity", 0.15),
+          M("over"));
+      },
+      toTitle() {
+        toTitle();
+      },
       debugCut() {
         let P = c.relays.find((V) => !V.cut);
         P && me(P);
@@ -244,7 +290,32 @@ function createGameFlow(context) {
         smoothstep(V - 1.6, V, E.t),
       )));
   }
+  function toTitle() {
+    let was = _.mode;
+    (a(context.enemies, "clear"),
+      a(context.fx, "clear"),
+      a(context.audio, "setPaused", !1),
+      a(context.audio, "setIntensity", 0.15),
+      a(context.weapon, "setVisible", !1),
+      r.setGameplay && r.setGameplay(!1),
+      r.exitLock(),
+      (n.enabled = !1),
+      o.setPrompt && o.setPrompt(null),
+      o.clearRadio && o.clearRadio(),
+      o.show(!1),
+      l.locationCard(!1),
+      (e.fade = 0),
+      (e.saturation = t),
+      (e.flash = 0),
+      (E.t = 0),
+      (_.mode = "mission"),
+      n.reset(s.playerStart),
+      l.show("title"),
+      M("title"),
+      context.events.emit("game:quit", { mode: was }));
+  }
   function H() {
+    let vs = _.mode !== "mission";
     (a(context.enemies, "clear"),
       a(context.fx, "clear"),
       a(context.combat, "reset"),
@@ -261,7 +332,7 @@ function createGameFlow(context) {
       (c.lowSaid = !1),
       (c.extractHint = 0),
       c.used.clear(),
-      (c.relays = A().map((P, V) => {
+      (c.relays = (vs ? [] : A()).map((P, V) => {
         let Y = (/([a-z0-9])$/i.exec(String(P.id || "")) || [
           0,
           String.fromCharCode(65 + V),
@@ -284,7 +355,7 @@ function createGameFlow(context) {
       (e.flash = 0),
       q(),
       o.setRelays && o.setRelays(0, c.relays.length),
-      ie());
+      vs || ie());
   }
   function O(P, V) {
     try {
@@ -318,7 +389,8 @@ function createGameFlow(context) {
   }
   function U({ skipIntro: P = !1, quick: V = !1, keepRetries: Y = !1 } = {}) {
     if (
-      (Y || (c.retries = 0),
+      ((_.mode = "mission"),
+      Y || (c.retries = 0),
       l.show("none"),
       l.locationCard(!1),
       a(context.audio, "setPaused", !1),
@@ -349,6 +421,8 @@ function createGameFlow(context) {
       C(!0));
   }
   function D() {
+    if (_.mode === "versus") return "Duel \u2014 first to five";
+    if (_.mode === "brawl") return "Brawl \u2014 free for all";
     if (c.allCut) return "Get to the boat";
     let P = c.relays.length - c.cut;
     return c.cut === 0
@@ -377,16 +451,25 @@ function createGameFlow(context) {
         ((g = !0), C(!1));
         return;
       }
-      (_.state === "playing" && g && G(), (g = !1));
+      // the brawl chat box releases the pointer on purpose; that must not pause the match
+      (_.state === "playing" && g && !_.keepPlayingOnUnlock && G(), (g = !1));
     }),
-    document.addEventListener("visibilitychange", () => {
-      document.hidden && _.state === "playing" && G();
-    }),
-    addEventListener("keydown", (P) => {
+    listen(
+      context,
+      document,
+      "visibilitychange",
+      () => {
+        document.hidden && _.state === "playing" && G();
+      },
+      void 0,
+      !1,
+    ),
+    listen(context, window, "keydown", (P) => {
       _.state !== "title" ||
+        l.screen !== "title" ||
         l.panelOpen ||
         (P.code !== "Enter" && P.code !== "NumpadEnter") ||
-        (P.target && P.target.tagName === "BUTTON") ||
+        (P.target && /^(BUTTON|INPUT|SELECT|TEXTAREA)$/.test(P.target.tagName)) ||
         (a(context.audio, "resume"), r.requestLock(), U({}));
     }));
   function G() {
@@ -415,7 +498,10 @@ function createGameFlow(context) {
       (g = !1),
       r.requestLock(),
       M("playing"),
-      setTimeout(() => C(!0), 700));
+      (context.lifetime ? context.lifetime.timeout : setTimeout)(
+        () => C(!0),
+        700,
+      ));
   }
   function N(P) {
     let V = P === "gull" ? "air" : "ground",
@@ -681,7 +767,9 @@ function createGameFlow(context) {
       q());
   }
   context.events.on("player:dead", () => {
-    (_.state !== "playing" && _.state !== "paused") ||
+    // in 1v1 and the brawl a death is a respawn timer, handled by versus.js / brawl.js
+    _.mode !== "mission" ||
+      (_.state !== "playing" && _.state !== "paused") ||
       (r.setGameplay && r.setGameplay(!1),
       r.exitLock(),
       o.setPrompt && o.setPrompt(null),
@@ -747,6 +835,17 @@ function createGameFlow(context) {
           r.pressed("pause"))
         )
           return (G(), !1);
+        if (_.mode !== "mission")
+          return (
+            r.mode === "lock" &&
+            !r.locked &&
+            !r.touch &&
+            !context.params.shot &&
+            !context.params.autostart
+              ? ((y -= P), y <= 0 && ((y = 2), o.message(r.describeMode(), 2.6)))
+              : (y = 0.8),
+            !0
+          );
         if ((ue(P), _.state !== "playing")) return !0;
         (X(P),
           (c.alertT = Math.max(0, c.alertT - P)),
@@ -794,6 +893,8 @@ function createGameFlow(context) {
             (l.show("dead"), a(context.audio, "setIntensity", 0.15)),
           !0
         );
+      case "over":
+        return ((e.fade = damp(e.fade || 0, 0.45, 1.2, P)), !0);
       case "complete":
         return (
           (e.fade = damp(e.fade || 0, 0.72, 0.9, P)),

@@ -1,3 +1,4 @@
+import { listen } from "../core/lifetime.js";
 import { Kb, Qb, ao, em, ml } from "./synthesis.js";
 import { Go, i_, s_ } from "./library.js";
 
@@ -1127,6 +1128,16 @@ function u_(i, e, t) {
         gain: 0.9,
       });
     }),
+    // the 1v1 opponent's rifle, positioned in the world
+    ln("versus:fire", (te) => {
+      ((I = (I + 1) & 3),
+        ze("rifle_shot", {
+          pos: Hn(te.pos),
+          variant: I,
+          gain: 0.9,
+          jitter: 0.02,
+        }));
+    }),
     ln("enemy:fire", (te) => {
       let he = te.type || (te.enemy && te.enemy.type),
         pe = Hn(te.pos) || (te.enemy && Hn(te.enemy.pos));
@@ -1271,18 +1282,26 @@ function u_(i, e, t) {
     let te = () => {
       if ((yr(), o()))
         for (let he of ["pointerdown", "keydown", "touchend", "mousedown"])
-          window.removeEventListener(he, te, !0);
+          unlisten[he] && unlisten[he]();
     };
+    let unlisten = {};
     for (let he of ["pointerdown", "keydown", "touchend", "mousedown"])
-      window.addEventListener(he, te, {
+      unlisten[he] = listen(i, window, he, te, {
         capture: !0,
         passive: !0,
       });
-    document.addEventListener("visibilitychange", () => {
-      try {
-        document.hidden ? e.suspend() : $ && e.resume();
-      } catch {}
-    });
+    listen(
+      i,
+      document,
+      "visibilitychange",
+      () => {
+        try {
+          document.hidden ? e.suspend() : $ && e.resume();
+        } catch {}
+      },
+      void 0,
+      !1,
+    );
   }
   function lu(te) {
     te = Math.min(Math.max(+te || 0, 0), 0.25);

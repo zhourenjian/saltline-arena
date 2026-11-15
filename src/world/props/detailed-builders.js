@@ -1612,13 +1612,13 @@ function KA(i, e) {
 function registerDetailedProps(i) {
   (i("barrel", (e, t = {}) => {
     let n = Math.abs(t.seed | 0) % 4;
-    return wf(`barrel|${t.color}|${!!t.lying}|${!!t.open}|${n}`, () =>
+    return wf(e, `barrel|${t.color}|${!!t.lying}|${!!t.open}|${n}`, () =>
       HA(e, t, n),
     );
   }),
     i("pallet", (e, t = {}) => {
       let n = Math.abs(t.seed | 0) % 4;
-      return wf(`pallet|${!!t.broken}|${n}`, () => VA(e, t, n));
+      return wf(e, `pallet|${!!t.broken}|${n}`, () => VA(e, t, n));
     }),
     i("pallet_stack", (e, t = {}) => WA(e, t)),
     i("crate_wood", (e, t = {}) => GA(e, t)),
@@ -1628,11 +1628,11 @@ function registerDetailedProps(i) {
     i("tire_stack", (e, t = {}) => $A(e, t)),
     i("jerry_can", (e, t = {}) => {
       let n = Math.abs(t.seed | 0) % 2;
-      return wf(`jerry|${t.color}|${n}`, () => ZA(e, t, n));
+      return wf(e, `jerry|${t.color}|${n}`, () => ZA(e, t, n));
     }),
     i("traffic_cone", (e, t = {}) => {
       let n = Math.abs(t.seed | 0) % 3;
-      return wf(`cone|${!!t.lying}|${n}`, () => jA(e, t, n));
+      return wf(e, `cone|${!!t.lying}|${n}`, () => jA(e, t, n));
     }),
     i("gas_cylinders", (e, t = {}) => JA(e, t)),
     i("pipe_stack", (e, t = {}) => KA(e, t)));

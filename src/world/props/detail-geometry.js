@@ -674,11 +674,16 @@ var Kn = class {
   }
 };
 
-var X3 = new Map();
+// prop templates, per material library: a world's templates (and the materials they hold) are
+// released with that world instead of outliving it in a module-level cache
+var X3 = new WeakMap();
 
-function wf(i, e) {
-  let t = X3.get(i);
-  return (t || ((t = e()), X3.set(i, t)), t.clone(!0));
+function wf(o, i, e) {
+  let owner = (o && o.mats) || o,
+    c = X3.get(owner);
+  c || ((c = new Map()), X3.set(owner, c));
+  let t = c.get(i);
+  return (t || ((t = e()), c.set(i, t)), t.clone(!0));
 }
 
 var j3 = (i, e, t) => {

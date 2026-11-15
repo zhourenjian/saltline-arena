@@ -1,4 +1,5 @@
 // DOM menus, persisted settings and controls panels.
+import { listen } from "../core/lifetime.js";
 import { PLAYER_DIMENSIONS, QUALITY_PRESETS } from "../core/config.js";
 
 var SETTINGS_KEY = "saltline.settings.v1";
@@ -47,6 +48,8 @@ var KEYBOARD_CONTROLS_HTML = `
     <div><dt>Reload</dt><dd><kbd>R</kbd></dd></div>
     <div><dt>Cut relay</dt><dd>Hold <kbd>E</kbd></dd></div>
     <div><dt>Jump</dt><dd><kbd>Space</kbd></dd></div>
+    <div><dt>Climb</dt><dd><kbd>W</kbd> + <kbd>Space</kbd> at a ledge</dd></div>
+    <div><dt>Ladder</dt><dd><kbd>E</kbd> or <kbd>W</kbd> + <kbd>Space</kbd>, then <kbd>W</kbd> / <kbd>S</kbd></dd></div>
     <div><dt>Sprint</dt><dd><kbd>Shift</kbd></dd></div>
     <div><dt>Crouch</dt><dd><kbd>C</kbd> or <kbd>Ctrl</kbd></dd></div>
     <div><dt>Melee</dt><dd><kbd>F</kbd></dd></div>
@@ -61,6 +64,8 @@ var TOUCH_CONTROLS_HTML = `
     <div><dt>Aim</dt><dd>AIM toggles</dd></div>
     <div><dt>Reload</dt><dd>RLD</dd></div>
     <div><dt>Jump</dt><dd>JUMP</dd></div>
+    <div><dt>Climb</dt><dd>JUMP while moving at a ledge</dd></div>
+    <div><dt>Ladder</dt><dd>USE at a ladder, then the stick</dd></div>
     <div><dt>Cut relay</dt><dd>Hold USE at a relay</dd></div>
     <div><dt>Sprint</dt><dd>Push the stick fully forward</dd></div>
   </dl>`;
@@ -80,16 +85,24 @@ function createMenus(context, e) {
         <div class="m-eyebrow"><span class="m-tag">B4</span><span>Port Authority Breach Unit</span><span class="m-dim">Saltline Terminal \xB7 05:42</span></div>
         <h1 class="m-word">SALTLINE</h1>
         <p class="m-premise">The port\u2019s security net has gone feral. Cut its three uplinks. Reach the boat.</p>
-        <div class="m-actions">
-          <button class="btn primary" data-act="deploy">Deploy</button>
+        <div class="m-actions m-main" role="group" aria-label="Main menu">
+          <button class="btn primary" data-act="brawl">Play</button>
+          <button class="btn" data-act="character">Character</button>
           <button class="btn" data-act="settings">Settings</button>
           <button class="btn m-only-narrow" data-act="controls">Controls</button>
+          <button class="btn m-more-btn" data-act="more" aria-expanded="false" aria-controls="m-more">More modes</button>
+          <div class="m-more" id="m-more" hidden>
+            <button class="btn" data-act="deploy">Mission \xB7 solo</button>
+            <button class="btn" data-act="versus">1v1 Duel</button>
+          </div>
         </div>
+        <p class="m-wearing">Character <b data-f="char-name">Operator</b></p>
+        <p class="m-install" hidden><a href="#" data-install>Play full screen: add to Home Screen \u203A</a></p>
         <p class="m-note">Every surface, machine and sound is generated in your browser. Nothing is downloaded.</p>
       </div>
       <aside class="m-legend" aria-label="Controls at a glance">
         <div><span><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> Move</span><span><kbd>Mouse</kbd> Look</span><span><kbd>LMB</kbd> Fire</span><span><kbd>RMB</kbd> Aim</span><span><kbd>R</kbd> Reload</span></div>
-        <div><span><kbd>E</kbd> Cut relay</span><span><kbd>Space</kbd> Jump</span><span><kbd>Shift</kbd> Sprint</span><span><kbd>C</kbd> Crouch</span><span><kbd>Esc</kbd> Pause</span></div>
+        <div><span><kbd>E</kbd> Cut relay</span><span><kbd>Space</kbd> Jump / climb</span><span><kbd>Shift</kbd> Sprint</span><span><kbd>C</kbd> Crouch</span><span><kbd>Esc</kbd> Pause</span></div>
         <div class="lg-touch"><em>Touch</em><span>Left thumb moves</span><span>Right thumb looks</span><span>Fire \xB7 Aim \xB7 Reload \xB7 Jump on screen</span></div>
       </aside>
     </section>
@@ -102,7 +115,9 @@ function createMenus(context, e) {
         <button class="btn primary" data-act="resume">Resume</button>
         <button class="btn" data-act="settings">Settings</button>
         <button class="btn" data-act="controls">Controls</button>
-        <button class="btn" data-act="restart">Restart mission</button>
+        <button class="btn" data-act="restart" data-only="mission">Restart mission</button>
+        <button class="btn" data-act="br-watch" data-only="brawl">Leave seat \xB7 watch</button>
+        <button class="btn" data-act="quit">Main menu</button>
       </div>
     </section>
 
@@ -110,7 +125,7 @@ function createMenus(context, e) {
       <div class="m-k">Breacher down</div>
       <h2 class="m-h">Signal lost</h2>
       <dl class="m-stats"><div><dt>Time survived</dt><dd data-f="dead-time">00:00</dd></div><div><dt>Relays cut</dt><dd data-f="dead-relays">0/3</dd></div></dl>
-      <div class="m-actions col"><button class="btn primary" data-act="retry">Retry</button></div>
+      <div class="m-actions col"><button class="btn primary" data-act="retry">Retry</button><button class="btn" data-act="quit">Main menu</button></div>
     </section>
 
     <section class="m-screen m-card m-debrief" data-s="complete" aria-label="Debrief">
@@ -123,7 +138,59 @@ function createMenus(context, e) {
         <div><dt>Machines destroyed</dt><dd data-f="kills">0</dd></div>
         <div><dt>Retries</dt><dd data-f="retries">0</dd></div>
       </dl>
-      <div class="m-actions col"><button class="btn primary" data-act="redeploy">Redeploy</button></div>
+      <div class="m-actions col"><button class="btn primary" data-act="redeploy">Redeploy</button><button class="btn" data-act="quit">Main menu</button></div>
+    </section>
+
+    <section class="m-screen m-card m-chars" data-s="character" aria-label="Character">
+      <div class="m-k">Loadout \xB7 Body</div>
+      <h2 class="m-h">Character</h2>
+      <p class="m-line">Your pick is what the other player sees in a duel, and what you see in third person (<kbd>T</kbd>).</p>
+      <div class="ch-list" data-f="ch-list" role="listbox" aria-label="Characters"></div>
+      <p class="ch-info" data-f="ch-info" role="status"></p>
+      <div class="m-actions"><button class="btn primary" data-act="ch-done">Done</button></div>
+    </section>
+
+    <section class="m-screen m-card m-versus" data-s="versus" aria-label="1v1 duel">
+      <div class="m-k">Harbor \xB7 1v1</div>
+      <h2 class="m-h">Duel</h2>
+      <p class="m-line">First to 5 kills. No machines. Respawn 3 s after a death. Both players connect to the same duel server (<code>npm run server</code>).</p>
+      <div class="vs-form">
+        <label class="vs-field"><span>Server</span><input data-f="vs-server" type="text" spellcheck="false" autocomplete="off" inputmode="url"></label>
+        <label class="vs-field"><span>Callsign</span><input data-f="vs-name" type="text" minlength="3" maxlength="8" spellcheck="false" autocomplete="off"></label>
+      </div>
+      <div class="vs-lobby" data-f="vs-lobby">
+        <button class="btn primary" data-act="vs-create">Create room</button>
+        <div class="vs-join">
+          <input data-f="vs-code" type="text" maxlength="4" placeholder="CODE" aria-label="Room code" spellcheck="false" autocomplete="off" autocapitalize="characters">
+          <button class="btn" data-act="vs-join">Join</button>
+        </div>
+      </div>
+      <div class="vs-room" data-f="vs-room" hidden>
+        <div class="vs-code-row"><span>Room code</span><b data-f="vs-room-code">----</b></div>
+        <ol class="vs-players" data-f="vs-players"></ol>
+      </div>
+      <p class="vs-status" data-f="vs-status" role="status" aria-live="polite"></p>
+      <div class="m-actions"><button class="btn" data-act="vs-back">Back</button></div>
+    </section>
+
+    <section class="m-screen m-card m-versus" data-s="brawl" aria-label="Brawl">
+      <div class="m-k">Harbor \xB7 free for all</div>
+      <h2 class="m-h">Brawl</h2>
+      <p class="m-line">Up to 6 players per arena, everyone against everyone. If a seat is free you jump straight in; otherwise you queue and watch. While people wait, the last place is cut every minute and the next in line takes the seat. Spectators can follow any player or fly a free camera, and chat by text or push-to-talk.</p>
+      <div class="vs-form">
+        <label class="vs-field"><span>Server</span><input data-f="br-server" type="text" spellcheck="false" autocomplete="off" inputmode="url"></label>
+        <label class="vs-field"><span>Callsign</span><input data-f="br-name" type="text" minlength="3" maxlength="8" spellcheck="false" autocomplete="off"></label>
+      </div>
+      <p class="vs-status" data-f="br-status" role="status" aria-live="polite"></p>
+      <div class="m-actions"><button class="btn primary" data-act="br-enter">Join the brawl</button><button class="btn" data-act="br-watch-only">Watch only</button><button class="btn" data-act="br-back">Back</button></div>
+    </section>
+
+    <section class="m-screen m-card m-vsresult" data-s="vs-result" aria-label="Duel result">
+      <div class="m-k" data-f="vsr-kicker">Duel over</div>
+      <h2 class="m-h" data-f="vsr-title">Victory</h2>
+      <div class="vsr-score"><span data-f="vsr-you">You</span><b data-f="vsr-score">5 : 0</b><span data-f="vsr-them">Opponent</span></div>
+      <p class="vs-status" data-f="vsr-status" role="status" aria-live="polite"></p>
+      <div class="m-actions col"><button class="btn primary" data-act="vs-rematch">Rematch</button><button class="btn" data-act="quit">Main menu</button></div>
     </section>
 
     <div class="panel" role="dialog" aria-modal="true" aria-label="Settings and controls" tabindex="-1" hidden>
@@ -227,13 +294,13 @@ function createMenus(context, e) {
           ? `Quality was picked for this device (${U || "default"}). Lower it if the frame rate struggles.`
           : "Quality changes apply at once; shadows and reflections may take a moment to rebuild."));
   }
-  (u.addEventListener("input", () => {
+  (listen(context, u, "input", () => {
     ((n.sens = +u.value), v("sens"), g(), saveSettings(n));
   }),
-    h.addEventListener("input", () => {
+    listen(context, h, "input", () => {
       ((n.volume = +h.value / 100), v("volume"), g(), saveSettings(n));
     }),
-    f.addEventListener("input", () => {
+    listen(context, f, "input", () => {
       ((n.fov = +f.value), v("fov"), g(), saveSettings(n));
     }));
   let x = o('[data-row="fs"]'),
@@ -266,8 +333,8 @@ function createMenus(context, e) {
   let E = () => {
     y.textContent = b() ? "Exit fullscreen" : "Enter fullscreen";
   };
-  (document.addEventListener("fullscreenchange", E),
-    document.addEventListener("webkitfullscreenchange", E));
+  (listen(context, document, "fullscreenchange", E, void 0, !1),
+    listen(context, document, "webkitfullscreenchange", E, void 0, !1));
   function w(U) {
     ((d = document.activeElement),
       (a.hidden = !1),
@@ -301,7 +368,7 @@ function createMenus(context, e) {
         });
       } catch {}
   }
-  (s.addEventListener("click", (U) => {
+  (listen(context, s, "click", (U) => {
     let T = U.target.closest("button");
     if (!T || !s.contains(T)) return;
     if ((context.events.emit("ui:click", {}), T.dataset.q)) {
@@ -313,7 +380,13 @@ function createMenus(context, e) {
       return;
     }
     let D = T.dataset.act;
-    D === "settings"
+    D === "more"
+      ? (() => {
+          let box = s.querySelector(".m-more");
+          box.hidden = !box.hidden;
+          T.setAttribute("aria-expanded", String(!box.hidden));
+        })()
+      : D === "settings"
       ? w("settings")
       : D === "controls"
         ? w("controls")
@@ -323,16 +396,32 @@ function createMenus(context, e) {
             ? ((n.invertY = !n.invertY), v("invertY"), g(), saveSettings(n))
             : D === "fullscreen"
               ? M()
-              : D && e[D] && e[D](U);
+              : D && e[D]
+                ? e[D](U)
+                : D === "ch-done" || D === "vs-back" || D === "br-back"
+                  ? (context.events.emit("menu:action", { act: D, el: T }), q.show("title"))
+                  : D && context.events.emit("menu:action", { act: D, el: T });
   }),
-    s.addEventListener("mouseover", (U) => {
+    // Escape on a main-menu sub screen goes back to the title
+    listen(context, window, "keydown", (U) => {
+      U.code !== "Escape" ||
+        !a.hidden ||
+        (p !== "character" && p !== "versus" && p !== "brawl") ||
+        (U.preventDefault(),
+        context.events.emit("menu:action", {
+          act: p === "character" ? "ch-done" : p === "brawl" ? "br-back" : "vs-back",
+          el: null,
+        }),
+        q.show("title"));
+    }),
+    listen(context, s, "mouseover", (U) => {
       let T = U.target.closest("button");
       T &&
         U.relatedTarget &&
         !T.contains(U.relatedTarget) &&
         context.events.emit("ui:hover", {});
     }),
-    s.addEventListener("keydown", (U) => {
+    listen(context, s, "keydown", (U) => {
       if (
         (U.code === "Escape" &&
           !a.hidden &&
@@ -369,7 +458,10 @@ function createMenus(context, e) {
         return !a.hidden;
       },
       closePanel: S,
+      field: c,
       show(U) {
+        let prev = p;
+        s.dataset.mode = (context.game && context.game.mode) || "mission";
         U !== p &&
           ((p = U),
           (s.dataset.screen = U),
@@ -379,7 +471,8 @@ function createMenus(context, e) {
             ? (g(), setTimeout(H, 30))
             : document.activeElement &&
               s.contains(document.activeElement) &&
-              document.activeElement.blur());
+              document.activeElement.blur(),
+          context.events.emit("menu:screen", { screen: U, prev }));
       },
       locationCard(U) {
         l.classList.toggle("on", !!U);

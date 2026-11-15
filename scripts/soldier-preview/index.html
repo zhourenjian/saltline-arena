@@ -1,0 +1,92 @@
+<!doctype html><meta charset="utf-8"><title>soldier preview</title>
+<style>html,body{margin:0;background:#222}canvas{display:block}</style>
+<body>
+<script>
+window.DuoWorldAvatars = { defs: {}, register: function (d) { this.defs[d.id] = d; } };
+</script>
+<script src="/public/avatars/swat-operator/avatar.js"></script>
+<script src="/public/avatars/masked-raider/avatar.js"></script>
+<script type="module">
+import * as THREE from '/src/vendor/three-r180.js';
+import { createHeldGun, gunKit } from '/src/weapons/held-gun.js';
+const W = 1280, H = 720;
+const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+renderer.setSize(W, H); renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.0;
+document.body.appendChild(renderer.domElement);
+const scene = new THREE.Scene(); scene.background = new THREE.Color(0x8a9199);
+// gradient environment
+const envScene = new THREE.Scene();
+const sky = new THREE.Mesh(new THREE.SphereGeometry(10, 32, 16), new THREE.ShaderMaterial({ side: THREE.BackSide, vertexShader: 'varying vec3 p;void main(){p=position;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}', fragmentShader: 'varying vec3 p;void main(){float h=normalize(p).y;vec3 c=mix(vec3(.25,.24,.22),vec3(.75,.82,.95),smoothstep(-.2,.8,h));c+=vec3(1.2)*smoothstep(.9,1.,h);gl_FragColor=vec4(c,1.);}' }));
+envScene.add(sky);
+const pm = new THREE.PMREMGenerator(renderer); scene.environment = pm.fromScene(envScene, 0.02).texture;
+const sun = new THREE.DirectionalLight(0xfff0dd, 2.6); sun.position.set(3, 5, 4); sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048);
+Object.assign(sun.shadow.camera, { left: -3, right: 3, top: 3, bottom: -3, near: 1, far: 15 }); scene.add(sun);
+scene.add(new THREE.HemisphereLight(0xbfd0ee, 0x555048, 0.5));
+const ground = new THREE.Mesh(new THREE.PlaneGeometry(40, 40), new THREE.MeshStandardMaterial({ color: 0x6d6a62, roughness: 0.95 }));
+ground.rotation.x = -Math.PI / 2; ground.receiveShadow = true; scene.add(ground);
+const grid = new THREE.GridHelper(40, 80, 0x444444, 0x555555); grid.position.y = 0.001; scene.add(grid);
+const ledge = new THREE.Mesh(new THREE.BoxGeometry(2, 1, 1.2), new THREE.MeshStandardMaterial({ color: 0x8a7a5a, roughness: 0.9 }));
+ledge.castShadow = ledge.receiveShadow = true; ledge.visible = false; scene.add(ledge);
+const ladder = new THREE.Group();
+for (const x of [-0.25, 0.25]) { const r = new THREE.Mesh(new THREE.BoxGeometry(0.05, 4, 0.05), new THREE.MeshStandardMaterial({ color: 0xaa9a30 })); r.position.set(x, 2, 0); ladder.add(r); }
+for (let i = 0; i < 14; i++) { const r = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.5, 8), new THREE.MeshStandardMaterial({ color: 0xaa9a30 })); r.rotation.z = Math.PI / 2; r.position.set(0, 0.2 + i * 0.3, 0); ladder.add(r); }
+ladder.visible = false; scene.add(ladder);
+const cam = new THREE.PerspectiveCamera(35, W / H, 0.05, 100);
+const marker = new THREE.Mesh(new THREE.SphereGeometry(0.012), new THREE.MeshBasicMaterial({ color: 0x00ff00, depthTest: false })); marker.renderOrder = 99; marker.visible = false; scene.add(marker);
+
+const P = window.P = {
+  THREE, scene, cam, renderer, inst: null, holder: new THREE.Group(), ledge, ladder, marker,
+  armed: true, act: [0, 0, false],
+  async make(id) {
+    if (P.inst) { P.holder.remove(P.inst.object3D); P.inst.dispose(); }
+    scene.add(P.holder);
+    const def = window.DuoWorldAvatars.defs[id];
+    const t0 = performance.now();
+    P.inst = await def.create({ THREE, baseUrl: '/', coordinates: { up: '+Y', forward: '+Z', metersPerUnit: 1 } });
+    P.createMs = performance.now() - t0; P.def = def;
+    P.holder.add(P.inst.object3D);
+    P.gun = P.gun || createHeldGun(gunKit(P));
+    P.arm(true); P.act = [0, 0, false]; P.holder.position.set(0, 0, 0);
+    return { ms: P.createMs, meta: def.metadata };
+  },
+  // true = in the hands, 'stow' = on the back, false = no gun
+  arm(on) {
+    P.armed = on === true;
+    const a = on ? P.inst.getAnchor(on === 'stow' ? 'weaponStow' : 'weapon') : null;
+    if (a) a.add(P.gun.object3D); else if (P.gun.object3D.parent) P.gun.object3D.parent.remove(P.gun.object3D);
+  },
+  step(loc, n, dt) {
+    dt = dt || 1 / 60; n = n || 1;
+    for (let i = 0; i < n; i++) {
+      P.gun.setAction(P.act[0], P.act[1], P.act[2]);
+      const s = Object.assign({ grounded: true, speed: 0, velocity: { x: 0, y: 0, z: 0 }, phase: 'grounded', deltaSeconds: dt, mode: 'duoworld:walk', stance: 'standing', sprinting: false }, loc);
+      if (P.armed) s.held = P.oneHand ? Object.assign({}, P.gun.held, { support: null }) : P.gun.held;
+      P.inst.setLocomotion(s); P.inst.update(dt);
+    }
+  },
+  view(az, el, dist, target) {
+    const t = new THREE.Vector3(...(target || [0, 1.05, 0]));
+    cam.position.set(t.x + dist * Math.cos(el) * Math.sin(az), t.y + dist * Math.sin(el), t.z + dist * Math.cos(el) * Math.cos(az));
+    cam.lookAt(t); P.holder.updateMatrixWorld(true); renderer.render(scene, cam);
+  },
+  anchorPos(n) { P.holder.updateMatrixWorld(true); return new THREE.Vector3().setFromMatrixPosition(P.inst.getAnchor(n).matrixWorld).toArray(); },
+  render() { renderer.render(scene, cam); },
+  muzzleScreen() { P.holder.updateMatrixWorld(true); const v = P.gun.muzzle(new THREE.Vector3()); marker.position.copy(v); return v.toArray(); },
+  measure() {
+    P.holder.updateMatrixWorld(true); const b = new THREE.Box3(); let miny = 1e9, maxy = -1e9;
+    P.inst.object3D.traverse((o) => { if (o.isMesh && !o.isSkinnedMesh && o.name !== 'x') { } });
+    // measure rigid + skinned vertices (excluding the rifle group)
+    const v = new THREE.Vector3();
+    P.inst.object3D.traverse((o) => {
+      if (!o.isMesh) return;
+      let p = o, gun = false; while (p) { if (p === P.gun.object3D) gun = true; p = p.parent; }
+      if (gun) return;
+      const pos = o.geometry.attributes.position;
+      for (let i = 0; i < pos.count; i++) { if (o.isSkinnedMesh) o.getVertexPosition(i, v); else v.fromBufferAttribute(pos, i); v.applyMatrix4(o.matrixWorld); miny = Math.min(miny, v.y); maxy = Math.max(maxy, v.y); }
+    });
+    return { miny, maxy, h: maxy - miny };
+  },
+};
+window.READY = true;
+</script>

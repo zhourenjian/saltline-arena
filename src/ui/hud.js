@@ -1,4 +1,5 @@
 // DOM HUD, objective markers, damage feedback and radio subtitles.
+import { listen } from "../core/lifetime.js";
 import { Vector3 } from "../vendor/three-r180.js";
 
 var tx = 4;
@@ -124,8 +125,8 @@ function createHUD(context) {
   e.appendChild(j);
   let Q = !1,
     K = 420,
-    ie = innerWidth,
-    F = innerHeight,
+    ie = e.clientWidth || innerWidth,
+    F = e.clientHeight || innerHeight,
     X = {
       ammo: -1,
       mag: -1,
@@ -165,14 +166,15 @@ function createHUD(context) {
     fe = null,
     le = -1;
   function R() {
-    ((ie = innerWidth),
-      (F = innerHeight),
+    ((ie = e.clientWidth || innerWidth),
+      (F = e.clientHeight || innerHeight),
       (K = n.clientWidth || Math.min(420, ie * 0.6)),
       (X.tapeX = 1e9),
       (X.gap = -1));
     for (let k of J) ((k.lastC = 1e9), (k.lastW = ""));
   }
-  (addEventListener("resize", R),
+  (listen(context, window, "resize", R, void 0, !1),
+    listen(context, window, "saltline-viewport", R, void 0, !1),
     context.events.on("player:hitEnemy", (k) => {
       (I.hitmarker(
         k && k.killed
@@ -467,7 +469,7 @@ function createHUD(context) {
     }
     let Ne = Math.max(1, Math.min(60, ve.magSize | 0 || 30)),
       dt = Math.max(0, ve.ammo | 0),
-      xe = Math.max(0, ve.reserve | 0);
+      xe = context.game && context.game.mode === "brawl" ? -2 : Math.max(0, ve.reserve | 0);
     if (
       (Ne !== X.mag &&
         ((X.mag = Ne),
@@ -481,7 +483,7 @@ function createHUD(context) {
         ne[we].className = we < dt ? "" : "off";
     }
     (xe !== X.reserve &&
-      ((X.reserve = xe), (U.textContent = String(xe).padStart(3, "0"))),
+      ((X.reserve = xe), (U.textContent = xe === -2 ? "\u221E" : String(xe).padStart(3, "0"))),
       ve.name !== X.name &&
         ((X.name = ve.name), (D.textContent = ve.name || "")));
     let Ie = dt <= Math.ceil(Ne * 0.27),

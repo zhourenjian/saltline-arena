@@ -1,4 +1,5 @@
 // Original keyboard, pointer, touch and gamepad controls.
+import { listen } from "../core/lifetime.js";
 
 var KEY_BINDINGS = {
   KeyW: "forward",
@@ -146,9 +147,10 @@ function createInput(context) {
     (n.clear(),
       (u = 0),
       (j = !1),
-      M && (M.btn.ads.classList.remove("active"), ie(), (q = -1), (D = -1)));
+      (jc = !1),
+      M && (M.btn.ads.classList.remove("active"), M.btn.crouch.classList.remove("active"), ie(), (q = -1), (D = -1)));
   }
-  (addEventListener("keydown", (P) => {
+  (listen(context, window, "keydown", (P) => {
     let V = KEY_BINDINGS[P.code];
     if (!V) return;
     let Y = P.target;
@@ -168,15 +170,29 @@ function createInput(context) {
         P.preventDefault(),
       !P.repeat && d("key", V, !0));
   }),
-    addEventListener("keyup", (P) => {
-      d("key", KEY_BINDINGS[P.code], !1);
-    }),
-    addEventListener("blur", () => {
-      v();
-    }));
+    listen(
+      context,
+      window,
+      "keyup",
+      (P) => {
+        d("key", KEY_BINDINGS[P.code], !1);
+      },
+      void 0,
+      !1,
+    ),
+    listen(
+      context,
+      window,
+      "blur",
+      () => {
+        v();
+      },
+      void 0,
+      !1,
+    ));
   let g = (P) =>
     P === 0 ? "fire" : P === 2 ? "ads" : P === 1 ? "melee" : null;
-  (e.addEventListener("mousedown", (P) => {
+  (listen(context, e, "mousedown", (P) => {
     if (!(f.touch && performance.now() - E < 800) && r) {
       if (!f.locked && f.mode === "lock") {
         (A(), P.preventDefault());
@@ -185,18 +201,25 @@ function createInput(context) {
       ((u |= 1 << P.button), d("mouse", g(P.button), !0), P.preventDefault());
     }
   }),
-    addEventListener("mouseup", (P) => {
-      ((u &= ~(1 << P.button)), d("mouse", g(P.button), !1));
-    }),
-    addEventListener("contextmenu", (P) => {
+    listen(
+      context,
+      window,
+      "mouseup",
+      (P) => {
+        ((u &= ~(1 << P.button)), d("mouse", g(P.button), !1));
+      },
+      void 0,
+      !1,
+    ),
+    listen(context, window, "contextmenu", (P) => {
       (P.target === e || r) && P.preventDefault();
     }),
-    addEventListener("mousemove", (P) => {
+    listen(context, window, "mousemove", (P) => {
       if (
         r &&
         (f.mode === "drag" &&
-          ((x = P.clientX / Math.max(1, innerWidth)),
-          (y = P.clientY / Math.max(1, innerHeight)),
+          ((x = P.clientX / Math.max(1, (t && t.clientWidth) || innerWidth)),
+          (y = P.clientY / Math.max(1, (t && t.clientHeight) || innerHeight)),
           (b = !0)),
         f.locked || f.mode === "drag")
       ) {
@@ -207,25 +230,39 @@ function createInput(context) {
           (f.look.dy += Y * f_ * f.sensitivity * (f.invertY ? -1 : 1)));
       }
     }),
-    document.addEventListener("pointerlockchange", () => {
-      if (((f.locked = document.pointerLockElement === e), f.locked))
-        ((a = !0), (l = 0), (c = 0), f.touch || p("lock"));
-      else {
-        (o.mouse.clear(), n.delete("fire"), n.delete("ads"));
-        for (let P of o.key) n.add(P);
-        u = 0;
-      }
-      context.events.emit("input:lock", {
-        locked: f.locked,
-      });
-    }),
-    document.addEventListener("pointerlockerror", () => m()));
+    listen(
+      context,
+      document,
+      "pointerlockchange",
+      () => {
+        if (((f.locked = document.pointerLockElement === e), f.locked))
+          ((a = !0), (l = 0), (c = 0), f.touch || p("lock"));
+        else {
+          (o.mouse.clear(), n.delete("fire"), n.delete("ads"));
+          for (let P of o.key) n.add(P);
+          u = 0;
+        }
+        context.events.emit("input:lock", {
+          locked: f.locked,
+        });
+      },
+      void 0,
+      !1,
+    ),
+    listen(context, document, "pointerlockerror", () => m(), void 0, !1));
   let x = 0.5,
     y = 0.5,
     b = !1;
-  document.addEventListener("mouseleave", () => {
-    b = !1;
-  });
+  listen(
+    context,
+    document,
+    "mouseleave",
+    () => {
+      b = !1;
+    },
+    void 0,
+    !1,
+  );
   function m() {
     ((l = 0), !(f.locked || f.touch) && (c++, a || p("drag")));
   }
@@ -267,12 +304,13 @@ function createInput(context) {
     D = -1,
     C = 0,
     G = 0,
+    jc = !1,
     j = !1;
   function N() {
     let P = document.createElement("div");
     ((P.className = "touch"),
       (P.innerHTML =
-        '<div class="t-stick"><i class="t-ring"></i><i class="t-nub"></i></div><button class="t-btn t-fire" data-a="fire" aria-label="Fire"><span>FIRE</span></button><button class="t-btn t-ads" data-a="ads" aria-label="Aim"><span>AIM</span></button><button class="t-btn t-reload" data-a="reload" aria-label="Reload"><span>RLD</span></button><button class="t-btn t-jump" data-a="jump" aria-label="Jump"><span>JUMP</span></button><button class="t-btn t-interact" data-a="interact" aria-label="Interact"><span>USE</span></button><button class="t-btn t-pause" data-a="pause" aria-label="Pause"><span>II</span></button>'),
+        '<div class="t-stick"><i class="t-ring"></i><i class="t-nub"></i></div><button class="t-btn t-fire" data-a="fire" aria-label="Fire"><span>FIRE</span></button><button class="t-btn t-ads" data-a="ads" aria-label="Aim"><span>AIM</span></button><button class="t-btn t-reload" data-a="reload" aria-label="Reload"><span>RLD</span></button><button class="t-btn t-jump" data-a="jump" aria-label="Jump"><span>JUMP</span></button><button class="t-btn t-crouch" data-a="crouch" aria-label="Crouch" aria-pressed="false"><span>CROUCH</span></button><button class="t-btn t-interact" data-a="interact" aria-label="Interact"><span>USE</span></button><button class="t-btn t-pause" data-a="pause" aria-label="Menu"><span>MENU</span></button>'),
       t.appendChild(P));
     let V = (L) => P.querySelector(L),
       Y = {
@@ -284,19 +322,27 @@ function createInput(context) {
           ads: V(".t-ads"),
           reload: V(".t-reload"),
           jump: V(".t-jump"),
+          crouch: V(".t-crouch"),
           interact: V(".t-interact"),
           pause: V(".t-pause"),
         },
       };
     for (let L in Y.btn) {
       let Z = Y.btn[L];
-      Z.addEventListener(
+      listen(
+        context,
+        Z,
         "touchstart",
         (oe) => {
           (oe.preventDefault(), oe.stopPropagation(), (E = performance.now()));
           let fe = oe.changedTouches[0];
           if (L === "ads") {
             ((j = !j), Z.classList.toggle("active", j));
+            return;
+          }
+          // crouch is a toggle too: both thumbs are busy, nobody can hold it
+          if (L === "crouch") {
+            ((jc = !jc), Z.classList.toggle("active", jc), Z.setAttribute("aria-pressed", String(jc)), d("touch", "crouch", jc));
             return;
           }
           (L === "fire" &&
@@ -309,7 +355,7 @@ function createInput(context) {
         },
       );
       let J = (oe) => {
-        if ((oe.preventDefault(), oe.stopPropagation(), L !== "ads")) {
+        if ((oe.preventDefault(), oe.stopPropagation(), L !== "ads" && L !== "crouch")) {
           if (L === "fire") {
             let fe = !1;
             for (let le of oe.changedTouches) le.identifier === D && (fe = !0);
@@ -319,13 +365,15 @@ function createInput(context) {
           (Z.classList.remove("active"), d("touch", L, !1));
         }
       };
-      (Z.addEventListener("touchend", J, {
+      (listen(context, Z, "touchend", J, {
         passive: !1,
       }),
-        Z.addEventListener("touchcancel", J, {
+        listen(context, Z, "touchcancel", J, {
           passive: !1,
         }),
-        Z.addEventListener(
+        listen(
+          context,
+          Z,
           "touchmove",
           (oe) => {
             if ((oe.preventDefault(), L === "fire"))
@@ -339,7 +387,7 @@ function createInput(context) {
             passive: !1,
           },
         ),
-        Z.addEventListener("contextmenu", (oe) => oe.preventDefault()));
+        listen(context, Z, "contextmenu", (oe) => oe.preventDefault()));
     }
     return Y;
   }
@@ -359,7 +407,9 @@ function createInput(context) {
   function ie() {
     ((w = -1), (H = O = 0), M && M.stick.classList.remove("on"));
   }
-  (addEventListener(
+  (listen(
+    context,
+    window,
     "touchstart",
     () => {
       ((E = performance.now()), K());
@@ -369,12 +419,14 @@ function createInput(context) {
       capture: !0,
     },
   ),
-    e.addEventListener(
+    listen(
+      context,
+      e,
       "touchstart",
       (P) => {
         if ((P.preventDefault(), !!r))
           for (let V of P.changedTouches)
-            V.clientX < innerWidth * 0.45 && w < 0
+            V.clientX < ((t && t.clientWidth) || innerWidth) * 0.45 && w < 0
               ? ((w = V.identifier),
                 (S = V.clientX),
                 (z = V.clientY),
@@ -389,7 +441,9 @@ function createInput(context) {
         passive: !1,
       },
     ),
-    e.addEventListener(
+    listen(
+      context,
+      e,
       "touchmove",
       (P) => {
         if ((P.preventDefault(), !!r))
@@ -417,10 +471,10 @@ function createInput(context) {
     for (let V of P.changedTouches)
       V.identifier === w ? ie() : V.identifier === q && (q = -1);
   };
-  (e.addEventListener("touchend", F, {
+  (listen(context, e, "touchend", F, {
     passive: !1,
   }),
-    e.addEventListener("touchcancel", F, {
+    listen(context, e, "touchcancel", F, {
       passive: !1,
     }));
   let X = {

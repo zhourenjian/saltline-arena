@@ -52,6 +52,28 @@ function createPhysics(context) {
           };
         return (e.push(z), (t = !0), z);
       },
+      // climbable ladders: { id, x, z (rung line), bottom, top, facing: [fx, fz] (the way a
+      // climber faces), width, exit: [x, y, z] stand point at the top or null }
+      ladders: [],
+      addLadder(L) {
+        let f = L.facing || [1, 0],
+          n = Math.hypot(f[0], f[1]) || 1,
+          ld = {
+            id: L.id || "ladder" + o.ladders.length,
+            x: +L.x,
+            z: +L.z,
+            bottom: +L.bottom || 0,
+            top: +L.top,
+            facing: [f[0] / n, f[1] / n],
+            width: L.width || 0.45,
+            exit: L.exit ? cloneVector3(L.exit) : null,
+          };
+        return (o.ladders.push(ld), ld);
+      },
+      removeLadder(L) {
+        let M = o.ladders.indexOf(L);
+        M >= 0 && o.ladders.splice(M, 1);
+      },
       removeBox(_) {
         let M = e.indexOf(_);
         M >= 0 && (e.splice(M, 1), (t = !0));

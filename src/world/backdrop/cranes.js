@@ -47,7 +47,8 @@ function z1(i, e, t = {}) {
     d = i.mats.get("glass"),
     v = i.mats.emissive(16769716, 6),
     g = (R, I, se) => o.add(R, I, se),
-    x = [];
+    x = [],
+    ladders = [];
   if (n) {
     let R = new Map([
         [a.uuid, [0.2, 0.25, 0.31]],
@@ -203,7 +204,8 @@ function z1(i, e, t = {}) {
         Ee(23.5 - 0.5, 17.7, R - 0.24, 23.5 + 0.5, 18.7, R + 0.24, 0.03),
         Ms,
       ),
-      g(a, Ee(Bt + 0.6, 22.95, R - 0.35, is - 0.6, 23.7, R + 0.35, 0.04), wn));
+      // sits under the stair-top deck (21.85) so the deck has head room
+      g(a, Ee(Bt + 0.6, 21.0, R - 0.35, is - 0.6, 21.75, R + 0.35, 0.04), wn));
   }
   for (let R of [Bt, is]) {
     (g(a, Ee(R - 0.45, 12.5, -Di + 0.6, R + 0.45, 13.5, Di - 0.6, 0.05), wn),
@@ -226,7 +228,7 @@ function z1(i, e, t = {}) {
       o,
       l,
       [
-        [Bt + 0.9, 13.55, 4.08],
+        [Bt + 1.25, 13.55, 4.08],
         [is - 0.9, 13.55, 4.08],
       ],
       {
@@ -310,30 +312,30 @@ function z1(i, e, t = {}) {
     for (let ce = wo + 0.6; ce < Xi; ce += 2.45)
       (g(a, jt([ce, 21.84, ae], [ce, 21.3, ae], 0.07, 0.07), Ms),
         g(a, jt([ce, 21.82, k], [ce, 21.36, ae], 0.06, 0.08), Ms));
-    (ns(
-      o,
-      l,
-      [
-        [wo + 0.2, 21.9, k - R * 0.03],
-        [Xi - 0.2, 21.9, k - R * 0.03],
-      ],
-      {
-        post: 2.45,
-        tint: En,
-      },
-    ),
-      g(
+    // the +z outer rail opens where the stair-top deck joins the walkway
+    for (let [ve, _e] of R > 0
+      ? [
+          [wo + 0.2, 22.5],
+          [23.4, Xi - 0.2],
+        ]
+      : [[wo + 0.2, Xi - 0.2]])
+      (ns(
+        o,
         l,
-        Ee(
-          wo + 0.2,
-          21.9,
-          k - R * 0.03 - 0.008,
-          Xi - 0.2,
-          22.02,
-          k - R * 0.03 + 0.008,
-        ),
-        En,
-      ));
+        [
+          [ve, 21.9, k - R * 0.03],
+          [_e, 21.9, k - R * 0.03],
+        ],
+        {
+          post: 2.45,
+          tint: En,
+        },
+      ),
+        g(
+          l,
+          Ee(ve, 21.9, k - R * 0.03 - 0.008, _e, 22.02, k - R * 0.03 + 0.008),
+          En,
+        ));
     for (let ce of [44, 58])
       g(a, Ee(ce - 0.18, ai, I - 0.2, ce + 0.18, ai + 1.5, I + 0.2, 0.03), wn);
   }
@@ -481,7 +483,8 @@ function z1(i, e, t = {}) {
     S = 27.9,
     z = ai,
     H = 26,
-    O = 2.9;
+    // half-width kept inside the girders (outer face z 2.25) so the walkway beside them is clear
+    O = 2.1;
   (g(c, Ee(w, z, -O, S, H, O, 0.06), cl),
     g(
       a,
@@ -511,7 +514,7 @@ function z1(i, e, t = {}) {
   for (let R of [-1, 1])
     for (let I of [w + 1.4, w + 3.9, w + 6.1])
       q(I, 24.5, R * (O + 0.005), 1.5, 1.3, R > 0 ? 0 : Math.PI);
-  (q(w - 0.005, 23.75, -1.9, 1.4, 1.1, -Math.PI / 2),
+  (q(w - 0.005, 23.75, -1.3, 1.4, 1.1, -Math.PI / 2),
     g(
       c,
       Ee(w - 0.03, z + 0.15, 0.8, w, z + 2.15, 1.7, 0.01),
@@ -563,8 +566,8 @@ function z1(i, e, t = {}) {
       Ee(w + 5.4, H + 0.12, 0.4, w + 6.7, H + 0.85, 1.8, 0.03),
       [0.7, 0.72, 0.75],
     ),
-    g(h, Ke([w + 0.3, H + 0.12, 2.5], [w + 0.3, H + 1.9, 2.5], 0.03, 5)),
-    r.add(Bn(w + 0.3, H + 2.02, 2.5, 0.13), [9, 0.5, 0.25], 2.6, 0.25, 0.45));
+    g(h, Ke([w + 0.3, H + 0.12, 1.8], [w + 0.3, H + 1.9, 1.8], 0.03, 5)),
+    r.add(Bn(w + 0.3, H + 2.02, 1.8, 0.13), [9, 0.5, 0.25], 2.6, 0.25, 0.45));
   let T = 6.15,
     D = 6.97,
     C = 7.8,
@@ -597,19 +600,31 @@ function z1(i, e, t = {}) {
       g(h, Ee(R, se - 0.2, C - 0.06, I, se - 0.05, C)));
     let k = ae > 0 ? I - 0.03 : R + 0.03,
       ce = ae > 0 ? R : I;
-    ns(
-      o,
-      l,
-      [
-        [ce, se, C - 0.03],
-        [k, se, C - 0.03],
-        [k, se, T + 0.03],
-      ],
-      {
+    // the first landing's edge rail stops short of the caged ladder that comes up through it
+    let ve =
+      ae < 0 && se < 4
+        ? [
+            [
+              [ce, se, C - 0.03],
+              [k, se, C - 0.03],
+            ],
+            [
+              [k, se, 7.02],
+              [k, se, T + 0.03],
+            ],
+          ]
+        : [
+            [
+              [ce, se, C - 0.03],
+              [k, se, C - 0.03],
+              [k, se, T + 0.03],
+            ],
+          ];
+    for (let _e of ve)
+      ns(o, l, _e, {
         post: 0.9,
         tint: En,
-      },
-    );
+      });
   }
   let K = [3.6, 6.9, 10.2, 13.5, 16.8, 20.1];
   for (let R = 0; R < 5; R++)
@@ -687,11 +702,122 @@ function z1(i, e, t = {}) {
         ),
       );
     }
+    // the ladder itself (players only, so bullets pass through the rungs); the climber stands on
+    // its -x side and climbs onto the first landing (see player.js ladder mode)
     x.push({
-      min: [R - 0.72, 0, I - 0.4],
-      max: [R + 0.05, 4.7, I + 0.4],
-      bulletOnly: !1,
+      min: [R - 0.05, 0, I - 0.25],
+      max: [R + 0.07, K[0] - 0.05, I + 0.25],
+      playerOnly: !0,
     });
+    ladders.push({
+      id: "crane-ladder",
+      x: R,
+      z: I,
+      bottom: 0,
+      top: K[0],
+      facing: [1, 0],
+      width: 0.44,
+      exit: [G[0] + 0.45, K[0], I],
+    });
+  }
+  // Walkable stair tower, landings, mid-level beam walkway, stair-top deck and the +z boom
+  // walkway. Treads/landings are slabs (~0.25 m thick, so the 0.42 m step-up applies);
+  // railings are tall player-only walls (bullets pass, nobody mantles over them).
+  {
+    let box = (x0, y0, z0, x1, y1, z1, opt) =>
+        x.push({
+          min: [Math.min(x0, x1), Math.min(y0, y1), Math.min(z0, z1)],
+          max: [Math.max(x0, x1), Math.max(y0, y1), Math.max(z0, z1)],
+          ...opt,
+        }),
+      PO = { playerOnly: !0 },
+      RH = 1.9,
+      laneWalls = [
+        [
+          [T - 0.04, T],
+          [D - 0.02, D + 0.02],
+        ],
+        [
+          [D - 0.02, D + 0.02],
+          [C - 0.02, C + 0.02],
+        ],
+      ];
+    // one flight: x0,y0 -> x1,y1 in lane 0 (T..D) or 1 (D..C)
+    let flight = (x0, y0, x1, y1, lane) => {
+      let rise = y1 - y0,
+        n = Math.max(2, Math.round(rise / 0.21)),
+        run = (x1 - x0) / n,
+        zA = lane ? D : T,
+        zB = lane ? C : D;
+      for (let t = 1; t <= n; t++) {
+        let xa = x0 + run * (t - 1),
+          xb = x0 + run * t,
+          top = y0 + (rise * t) / n;
+        box(xa, top - 0.25, zA, xb, top, zB);
+        for (let [za, zb] of laneWalls[lane])
+          box(xa, top - rise / n - 0.3, za, xb, top + RH, zb, PO);
+      }
+    };
+    // landing at x xa..xb, height y; side -1 = ladder/G side, +1 = far j side
+    let landing = (xa, xb, y, side, openT) => {
+      box(xa, y - 0.25, T, xb, y, C);
+      box(xa - 0.04, y - 0.05, C - 0.02, xb + 0.04, y + RH, C + 0.02, PO);
+      let ex = side < 0 ? xa : xb;
+      box(ex - 0.02, y - 0.05, T - 0.04, ex + 0.02, y + RH, C + 0.02, PO);
+      openT || box(xa - 0.04, y - 0.05, T - 0.04, xb + 0.04, y + RH, T, PO);
+    };
+    for (let R = 0; R < 5; R++)
+      R % 2 === 0
+        ? (landing(G[0], G[1], K[R], -1), flight(G[1], K[R], j[0], K[R + 1], 0))
+        : (landing(j[0], j[1], K[R], 1, R === 3),
+          flight(j[0], K[R], G[1], K[R + 1], 1));
+    landing(j[0], j[1], K[5], 1);
+    flight(j[0], K[5], 23.4, 21.9, 1);
+    // first landing: lane 1 over it has no flight yet (that one ends at 10.2)
+    box(G[1], K[0] - 0.05, D - 0.02, G[1] + 0.04, K[0] + RH, C + 0.02, PO);
+    // stair-top deck at 21.9 joining the boom walkway
+    box(22.5, 21.65, On + 1.35, 23.4, 21.9, C);
+    box(22.46, 21.85, On + 1.35, 22.5, 21.9 + RH, C + 0.02, PO);
+    box(22.46, 21.85, C - 0.02, 23.44, 21.9 + RH, C + 0.02, PO);
+    box(23.4, 21.85, On + 1.39, 23.44, 21.9 + RH, D + 0.02, PO);
+    // +z boom walkway (z 2.25..3.15), only the stretch over the quay
+    let wx0 = 18,
+      wx1 = 29.3;
+    box(wx0, 21.65, On + 0.45, wx1, 21.9, On + 1.35);
+    for (let [a0, a1] of [
+      [wx0, 22.46],
+      [23.44, wx1],
+    ])
+      box(a0, 21.85, On + 1.35, a1, 21.9 + RH, On + 1.39, PO);
+    box(wx1, 21, On - 0.5, wx1 + 0.3, 26, On + 1.6, PO);
+    // box girders (solid), raised for players so nobody mantles onto them
+    for (let R of [-1, 1])
+      box(wo, fv, R * (On - 0.45), wx1, ai, R * (On + 0.45));
+    box(wx0, ai, On - 0.45, wx1, 24.5, On + 0.45, PO);
+    // machinery house and the leg-top portal beams that close the walkway at both ends
+    box(w - 0.15, z - 0.12, -O - 0.15, S + 0.15, H + 0.12, O + 0.15);
+    for (let R of [Bt, is])
+      (box(R - 0.45, 22.8, -Di + 0.6, R + 0.45, 23.8, Di - 0.6),
+        box(R - 0.45, 23.8, -Di + 0.6, R + 0.45, 25.5, Di - 0.6, PO));
+    // mid level (13.5): beam walkway along +z, transverse plate across the x=Bt frame,
+    // connector plate from the 13.5 landing
+    let mh = 13.5,
+      MW = (x0, z0, x1, z1) => box(x0, mh - 0.05, z0, x1, mh + RH, z1, PO);
+    box(Bt + 0.9, mh - 0.2, 4.05, is - 0.9, mh + 0.05, 4.95);
+    box(Bt + 0.45, mh - 0.25, -4.6, Bt + 1.25, mh, 4.05);
+    box(Bt + 0.45, mh - 0.25, 4.05, Bt + 0.9, mh, 4.95);
+    box(j[0], mh - 0.25, 4.95, j[1], mh, T);
+    for (let R of [-Di, Di])
+      box(Bt + 0.6, 12.5, R - 0.45, is - 0.6, mh, R + 0.45);
+    for (let R of [Bt, is])
+      box(R - 0.45, 12.5, -Di + 0.6, R + 0.45, mh, Di - 0.6);
+    (MW(Bt + 1.25, 4.05, j[1], 4.09),
+      MW(Bt + 0.6, 4.95, j[0], 4.99),
+      MW(j[0] - 0.04, 4.99, j[0], T - 0.04),
+      MW(j[1], 4.05, j[1] + 0.04, T),
+      MW(Bt + 0.41, -4.64, Bt + 0.45, 4.95),
+      MW(Bt + 0.41, -4.64, Bt + 1.26, -4.6),
+      MW(Bt + 1.22, -4.64, Bt + 1.26, 4.05));
   }
   g(f, Ee(13, 21.02, -On - 0.95, ks - 1.2, 21.12, -On - 0.85));
   for (let R = 13.5; R < ks - 1.2; R += 3.3)
@@ -897,6 +1023,7 @@ function z1(i, e, t = {}) {
       root: B,
       spreader: le,
       colliders: x,
+      ladders,
       tris: o.tris + P.tris,
     }
   );

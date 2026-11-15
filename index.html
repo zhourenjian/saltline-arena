@@ -4,19 +4,61 @@
     <meta charset="UTF-8" />
     <meta
       name="viewport"
-      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
     />
     <meta name="theme-color" content="#0b0d0f" />
+    <!-- Home Screen / installed app: full screen, no browser bars, status bar drawn over the game -->
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Saltline Arena" />
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png" />
+    <title>Saltline Arena — free multiplayer browser FPS, no download</title>
     <meta
       name="description"
-      content="Saltline — cut the port's three uplinks and reach the boat."
+      content="Saltline Arena: a free multiplayer first-person shooter that runs in your browser, on phone or desktop. Jump into a port-yard free-for-all, last one standing keeps the seat. No download, no sign-up."
     />
-    <title>Saltline</title>
-    <link rel="icon" href="data:," />
+    <meta name="keywords" content="browser FPS, multiplayer shooter, free online shooter, no download, WebGL game, mobile FPS, Saltline Arena, Saltline" />
+    <meta name="author" content="Zhou Renjian" />
+    <meta name="robots" content="index, follow, max-image-preview:large" />
+    <link rel="canonical" href="https://saltline.kakoola.com/" />
+    <link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Saltline Arena" />
+    <meta property="og:title" content="Saltline Arena — free multiplayer browser FPS" />
+    <meta property="og:description" content="Jump into a port-yard free-for-all in your browser. Phone or desktop, no download, no sign-up." />
+    <meta property="og:url" content="https://saltline.kakoola.com/" />
+    <meta property="og:image" content="https://saltline.kakoola.com/og.jpg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Saltline Arena — free multiplayer browser FPS" />
+    <meta name="twitter:description" content="Port-yard free-for-all in your browser. Phone or desktop, no download." />
+    <meta name="twitter:image" content="https://saltline.kakoola.com/og.jpg" />
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "VideoGame",
+        "name": "Saltline Arena",
+        "url": "https://saltline.kakoola.com/",
+        "image": "https://saltline.kakoola.com/og.jpg",
+        "description": "A free multiplayer first-person shooter that runs in the browser: port-yard free-for-all with a queue, spectating and voice.",
+        "genre": ["First-person shooter", "Multiplayer"],
+        "gamePlatform": ["Web browser", "iOS", "Android", "Desktop"],
+        "playMode": "MultiPlayer",
+        "applicationCategory": "Game",
+        "operatingSystem": "Any (WebGL 2 browser)",
+        "inLanguage": "en",
+        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+        "isBasedOn": "https://github.com/realskyrin/fps3ademo-saltline"
+      }
+    </script>
     <link rel="stylesheet" href="./src/fonts.css" />
     <link rel="stylesheet" href="./src/ui.css" />
   </head>
   <body>
+    <noscript>Saltline Arena is a free multiplayer first-person shooter that runs in the browser. It needs JavaScript and WebGL 2.</noscript>
     <div id="app">
       <canvas id="view" tabindex="0"></canvas>
       <div id="ui"></div>
@@ -26,6 +68,24 @@
         <div class="boot-bar"><i id="boot-fill"></i></div>
       </div>
     </div>
+    <!-- DuoWorld avatar registry (classic script: must run before any avatar.js) -->
+    <script src="./duoworld/avatar-registry.js"></script>
+    <!-- Installed Avatar Packages (public/avatars/<id>/). Registering is cheap: models load
+         only when an avatar is worn. To wear one by default, uncomment:
+         <script>window.DuoWorldInitialAvatar = "girl-purple";</script> -->
+    <!-- Character menu (host config): hide the built-in operator body and the listed packages from
+         the CHARACTER list; `default` is worn by players who never picked one. Hidden avatars
+         stay installed (?avatar=<id> and DuoWorld.setAvatar() still work). -->
+    <script>window.SaltlineCharacters = { builtIn: false, hide: ["girl-purple", "violet-girl", "voxel-walker", "blue-captain", "orange-mechanic", "jade-swordswoman", "red-runner"], default: "swat-operator" };</script>
+    <script src="./avatars/swat-operator/avatar.js"></script>
+    <script src="./avatars/masked-raider/avatar.js"></script>
+    <script src="./avatars/girl-purple/avatar.js"></script>
+    <script src="./avatars/violet-girl/avatar.js"></script>
+    <script src="./avatars/voxel-walker/avatar.js"></script>
+    <script src="./avatars/blue-captain/avatar.js"></script>
+    <script src="./avatars/orange-mechanic/avatar.js"></script>
+    <script src="./avatars/jade-swordswoman/avatar.js"></script>
+    <script src="./avatars/red-runner/avatar.js"></script>
     <script type="module" src="./src/game.js"></script>
   </body>
 </html>

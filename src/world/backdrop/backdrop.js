@@ -71,10 +71,14 @@ function Eb(i, { only: e = null, showcase: t = !1 } = {}) {
             surface: m,
             tag: "backdrop",
             noNav: !!b.noNav,
+            playerOnly: !!b.playerOnly,
+            bulletOnly: !!b.bulletOnly,
           }),
         );
     };
   if (l) for (let b of l.colliders) d(b, "metal");
+  if (l && l.ladders && i.physics && i.physics.addLadder)
+    for (let b of l.ladders) i.physics.addLadder(b);
   if (c) for (let b of c.colliders) d(b, "metal");
   a &&
     !t &&

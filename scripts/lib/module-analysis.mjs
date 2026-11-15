@@ -46,6 +46,16 @@ export async function readSourceGraph() {
             `Unexpected runtime package import in ${url.pathname}: ${node.source.value}`,
           );
         }
+        // non-JS assets (CSS imported with ?inline for the World Package) only need to exist
+        const [assetPath, query] = node.source.value.split("?");
+        if (query !== undefined || !assetPath.endsWith(".js")) {
+          await readFile(new URL(assetPath, url)).catch(() => {
+            throw new Error(
+              `Missing asset ${assetPath}, imported by ${url.pathname}`,
+            );
+          });
+          continue;
+        }
         imports.push({
           target: new URL(node.source.value, url).pathname,
           names: node.specifiers.map((specifier) => {

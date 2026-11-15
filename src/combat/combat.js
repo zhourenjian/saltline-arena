@@ -22,7 +22,44 @@ function createCombat(context) {
       ) {
         e.shots++;
         let l = context.physics.raycast(n, s, r),
-          c = context.enemies.raycast(n, s, l ? l.dist : r);
+          c = context.enemies.raycast(n, s, l ? l.dist : r),
+          tg = context.shotTargets,
+          th = null;
+        // other shootable bodies (the 1v1 opponent): nearest hit in front of walls and enemies wins
+        if (tg && tg.length) {
+          let lim = c ? c.dist : l ? l.dist : r;
+          for (let i = 0; i < tg.length; i++) {
+            let hit = tg[i].raycast(n, s, lim);
+            hit && hit.dist < lim && ((lim = hit.dist), (th = hit), (th.target = tg[i]));
+          }
+        }
+        if (th) {
+          e.hits++;
+          let f = {
+            point: th.point,
+            normal: th.normal || s.clone().negate(),
+            dist: th.dist,
+            surface: "enemy",
+            enemy: th.target.ref || th.target,
+            part: th.part,
+            dir: s,
+            from: "player",
+            killed: !1,
+            remote: !0,
+          };
+          return (
+            th.target.onHit(th),
+            context.events.emit("impact", f),
+            context.events.emit("player:hitEnemy", {
+              enemy: f.enemy,
+              part: th.part,
+              killed: !1,
+              weak: th.part === "head",
+              remote: !0,
+            }),
+            f
+          );
+        }
         if (c) {
           e.hits++;
           let u = c.part === "weak" ? 2.2 : 1,
