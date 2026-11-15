@@ -27,18 +27,19 @@ function installViewport(context) {
     events = [],
     settle = (reason) => {
       typeof reason == "string" && (why = reason);
-      // the layout box of #app (position: fixed; inset: 0) is the truth: it follows the real visible
-      // area, including the home-indicator strip, where innerHeight can come up short
+      // The numbers come from the window itself, never from #app: #app's own box depends on the
+      // --fill / class set by the previous round, and measuring it feeds that back (the app box
+      // used to flip between 874 and 936 px tall on an iPhone 16 Pro, several times a second).
       let vv = window.visualViewport,
-        box = app || (app = document.getElementById("app")),
-        w = Math.round((box && box.clientWidth) || window.innerWidth || (vv && vv.width) || 0),
-        h = Math.round((box && box.clientHeight) || window.innerHeight || (vv && vv.height) || 0);
+        w = Math.round(window.innerWidth || (vv && vv.width) || 0),
+        ih = Math.round(window.innerHeight || (vv && vv.height) || 0),
+        h = ih;
       // every distinct set of numbers, with what triggered the measurement (see ?vpdebug=1)
       let vvh = vv ? Math.round(vv.height) : -1,
-        raw = [window.innerWidth, window.innerHeight, vvh, root.clientHeight, w, h, screen.availHeight].join("/");
+        raw = [window.innerWidth, window.innerHeight, vvh, root.clientHeight, w, h, app && app.clientHeight, root.style.getPropertyValue("--fill")].join("/");
       if (raw !== lastRaw) {
         lastRaw = raw;
-        let line = `[vp] ${why} inner=${window.innerWidth}x${window.innerHeight} vv=${vv ? Math.round(vv.width) + "x" + vvh + "@" + Math.round(vv.offsetTop) : "-"} html=${root.clientWidth}x${root.clientHeight} app=${w}x${h} screen=${screen.width}x${screen.height} avail=${screen.availWidth}x${screen.availHeight} standalone=${isStandalone()} scroll=${window.scrollY}`;
+        let line = `[vp] ${why} inner=${window.innerWidth}x${window.innerHeight} vv=${vv ? Math.round(vv.width) + "x" + vvh + "@" + Math.round(vv.offsetTop) : "-"} html=${root.clientWidth}x${root.clientHeight} calc=${w}x${h} appbox=${(app || (app = document.getElementById("app"))).clientWidth}x${app.clientHeight} fill=${root.style.getPropertyValue("--fill") || 0} screen=${screen.width}x${screen.height} avail=${screen.availWidth}x${screen.availHeight} standalone=${isStandalone()} scroll=${window.scrollY}`;
         (events.push(line), events.length > 6 && events.shift(), console.log(line));
       }
       if (!w || !h) return;
@@ -47,23 +48,16 @@ function installViewport(context) {
       // which shows as a black bar. The screen itself is taller than the layout by exactly that
       // strip, so grow the app box down to the real bottom edge (never more than 80 px, and
       // never while the numbers are mid-rotation).
-      let lh = root.clientHeight,
-        lw = root.clientWidth,
-        long = Math.max(screen.width, screen.height),
+      // Only when the window is exactly one of the screen's two orientations (not mid-rotation).
+      let long = Math.max(screen.width, screen.height),
         short = Math.min(screen.width, screen.height),
-        full = lh >= lw ? long : short,
-        gap = isStandalone() ? full - lh : 0;
+        portrait = w <= h,
+        full = portrait ? long : short,
+        sane = portrait ? Math.abs(w - short) <= 1 : Math.abs(w - long) <= 1,
+        gap = isStandalone() && sane ? full - ih : 0;
       gap = gap > 0 && gap <= 80 ? Math.round(gap) : 0;
-      // ... and never taller than the screen itself: a layout that is counted too tall pushes the
-      // bottom controls down into the home indicator (screen.availHeight is the usable height)
-      let availLong = Math.max(screen.availWidth || 0, screen.availHeight || 0),
-        availShort = Math.min(screen.availWidth || 0, screen.availHeight || 0),
-        avail = lh >= lw ? availLong : availShort,
-        cap = Math.min(full, avail > full * 0.8 ? avail : full),
-        capped = isStandalone() && h > cap + 1 && h - cap <= 120;
-      root.classList.toggle("vp-capped", capped);
-      capped && root.style.setProperty("--app-h", cap + "px");
-      let next = w + "x" + h + "+" + gap + (capped ? "c" + cap : "");
+      h = ih + gap;
+      let next = w + "x" + h + "+" + gap;
       if (next === size) return;
       size = next;
       root.style.setProperty("--fill", gap + "px");
@@ -89,7 +83,15 @@ function installViewport(context) {
   // see ui.css html.is-standalone: the document itself must be as tall as the screen
   isStandalone() && root.classList.add("is-standalone");
   // ?vpdebug=1 prints the numbers on screen, for reporting layout problems from a real device
-  if (/[?&]vpdebug=1/.test(location.search)) {
+  let dbg = /[?&]vpdebug=1/.test(location.search);
+  try { dbg = dbg || localStorage.getItem("saltline.vpdebug") === "1"; } catch {}
+  // while a finger is on the left stick, say what the input and the player are doing (console)
+  let stickLog = setInterval(() => {
+    let g = window.__G || {},
+      d = g.input && g.input.debug ? g.input.debug() : null;
+    d && d.w >= 0 && g.player && console.log(`[stick] H=${d.H.toFixed(2)} O=${d.O.toFixed(2)} r=${d.r} move=${g.input.move.x.toFixed(2)},${g.input.move.y.toFixed(2)} spd=${(g.player.speed || 0).toFixed(2)} gnd=${g.player.onGround} crouch=${g.player.crouching} en=${g.player.enabled} pos=${g.player.pos.x.toFixed(1)},${g.player.pos.z.toFixed(1)} dt=${g.time && g.time.dt} state=${g.game && g.game.state}`);
+  }, 500);
+  if (dbg) {
     let box = document.createElement("pre");
     box.style.cssText = "position:fixed;left:6px;top:70px;z-index:99;margin:0;padding:4px 6px;font:10px/1.3 monospace;color:#9f9;background:rgba(0,0,0,.7);pointer-events:none;white-space:pre";
     document.body.appendChild(box);

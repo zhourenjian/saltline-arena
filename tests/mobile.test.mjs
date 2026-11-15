@@ -352,6 +352,29 @@ await test("the page cannot be scrolled out of place", async () => {
 });
 
 console.log("Brawl ammunition and performance");
+await test("Home Screen app on a 402x874 phone: the app box holds one height through rotations (no flip-flop between measurements)", async () => {
+  const page = await phone("&noinstall=1", spoof(IPHONE, true));
+  pages.push(page);
+  const seen = async (w, h, ms = 2200) => {
+    await page.send("Emulation.setDeviceMetricsOverride", { width: w, height: h, deviceScaleFactor: 2, mobile: true, screenWidth: 402, screenHeight: 874 });
+    await sleep(500); // the settling measurements after a change
+    const out = new Set();
+    for (let t = 0; t < ms; t += 100) {
+      out.add(await page.ev(`const a = document.getElementById("app"); return a.clientWidth + "x" + a.clientHeight`));
+      await sleep(100);
+    }
+    return [...out];
+  };
+  // the layout viewport 62 px short of the screen at first, then the full window (iOS 26 behaviour)
+  let a = await seen(402, 812, 800);
+  a = await seen(402, 874);
+  assert(a.length === 1 && a[0] === "402x874", "portrait: one stable size", a);
+  a = await seen(874, 402);
+  assert(a.length === 1 && a[0] === "874x402", "landscape: one stable size", a);
+  a = await seen(402, 874);
+  assert(a.length === 1 && a[0] === "402x874", "back to portrait: one stable size", a);
+});
+
 await test("a finger that vanished without a touchend does not lock the left stick", async () => {
   const page = await phone("&noinstall=1", spoof(IPHONE));
   pages.push(page);

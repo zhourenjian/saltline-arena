@@ -2890,9 +2890,3 @@ html.is-standalone body {
 .m-more-btn {
   opacity: 0.8;
 }
-
-/* the app box counted taller than the screen (iOS Home Screen): hold it to the screen height */
-html.vp-capped #app {
-  bottom: auto;
-  height: var(--app-h);
-}
