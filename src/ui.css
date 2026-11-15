@@ -929,43 +929,56 @@ body {
   border-color: var(--signal);
   color: var(--signal);
 }
+/* Right thumb cluster, after the layout sketch in right-botton-design.png: FIRE is the big
+   button at the right, mid-low; JUMP and CROUCH sit between FIRE and the screen edge (upper and
+   lower); AIM above FIRE and a little to the left; RELOAD below-left. Every button is placed by
+   its centre: --fx from the right edge, --fy from the bottom, then an offset (right, down). */
+.touch {
+  --fx: 135px;
+  --fy: calc(140px + var(--sab));
+}
 .t-fire {
-  width: 86px;
-  height: 86px;
-  right: calc(20px + var(--sar));
-  bottom: calc(62px + var(--sab));
+  width: 76px;
+  height: 76px;
+  right: calc(var(--fx) - 38px + var(--sar));
+  bottom: calc(var(--fy) - 38px);
   font-size: 14px;
 }
 .t-ads {
-  width: 60px;
-  height: 60px;
-  right: calc(120px + var(--sar));
-  bottom: calc(34px + var(--sab));
+  width: 54px;
+  height: 54px;
+  right: calc(var(--fx) + 12px - 27px + var(--sar));
+  bottom: calc(var(--fy) + 104px - 27px);
 }
 .t-jump {
-  width: 60px;
-  height: 60px;
-  right: calc(20px + var(--sar));
-  bottom: calc(164px + var(--sab));
-}
-.t-reload {
-  width: 54px;
-  height: 54px;
-  right: calc(108px + var(--sar));
-  bottom: calc(126px + var(--sab));
+  width: 52px;
+  height: 52px;
+  right: calc(var(--fx) - 88px - 26px + var(--sar));
+  bottom: calc(var(--fy) + 56px - 26px);
 }
 .t-crouch {
-  width: 54px;
-  height: 54px;
-  right: calc(190px + var(--sar));
-  bottom: calc(176px + var(--sab));
-  font-size: 10px;
+  width: 52px;
+  height: 52px;
+  right: calc(var(--fx) - 88px - 26px + var(--sar));
+  bottom: calc(var(--fy) - 64px - 26px);
+  font-size: 9px;
+  letter-spacing: 0.06em;
+}
+.t-crouch span {
+  margin-right: -0.06em;
+}
+.t-reload {
+  width: 46px;
+  height: 46px;
+  right: calc(var(--fx) + 60px - 23px + var(--sar));
+  bottom: calc(var(--fy) - 100px - 23px);
+  font-size: 11px;
 }
 .t-interact {
-  width: 68px;
-  height: 68px;
-  right: calc(186px + var(--sar));
-  bottom: calc(96px + var(--sab));
+  width: 66px;
+  height: 66px;
+  right: calc(var(--fx) + 105px - 33px + var(--sar));
+  bottom: calc(var(--fy) + 10px - 33px);
   border-color: var(--signal);
   color: var(--signal);
   display: none;
@@ -2923,13 +2936,6 @@ html.is-standalone #app {
   }
   .is-touch .h-wname {
     font-size: 10px;
-  }
-  .is-touch .t-jump {
-    bottom: calc(146px + var(--sab));
-  }
-  .is-touch .t-crouch {
-    right: calc(204px + var(--sar));
-    bottom: calc(158px + var(--sab));
   }
   .is-touch .h-health {
     top: calc(112px + var(--sat));

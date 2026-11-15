@@ -36,10 +36,14 @@ function recordProblem() {
   return "this browser cannot record audio";
 }
 
+// iPhone / iPad (an iPad can pose as a Mac)
+var onIOS = () => /iP(hone|ad|od)/.test(navigator.userAgent || "") || (navigator.platform === "MacIntel" && (navigator.maxTouchPoints || 0) > 1);
+
 function createVoice({ rate = BRAWL_RULES.voiceRate } = {}) {
   let ctx = null,
     capture = null, // { stream, source, node, buf, fill, acc, accN, step, onChunk }
     players = new Map(), // msg id → { next, gain }
+    prevSession = null, // navigator.audioSession.type before the recording (iOS Safari)
     volume = 1;
 
   function audio() {
@@ -64,9 +68,26 @@ function createVoice({ rate = BRAWL_RULES.voiceRate } = {}) {
   async function start(onChunk) {
     stop();
     if (!canRecord()) throw new Error(recordProblem());
+    // iOS: asking for echo cancellation / noise suppression turns on the system's voice-processing
+    // unit for the whole page, which leaves every sound hissy and quiet, and it stays that way after
+    // the recording stops. So on iOS ask for the raw microphone, and put the audio session in
+    // play-and-record only while talking.
+    let ios = onIOS(),
+      session = navigator.audioSession;
+    if (session && ios && !prevSession) {
+      try {
+        prevSession = session.type;
+        session.type = "play-and-record";
+      } catch {}
+    }
     let stream = await navigator.mediaDevices.getUserMedia({
-      audio: { channelCount: 1, echoCancellation: !0, noiseSuppression: !0, autoGainControl: !0 },
+      audio: ios
+        ? { channelCount: 1, echoCancellation: !1, noiseSuppression: !1, autoGainControl: !1 }
+        : { channelCount: 1, echoCancellation: !0, noiseSuppression: !0, autoGainControl: !0 },
       video: !1,
+    }).catch((e) => {
+      restoreSession();
+      throw e;
     });
     let ac = audio();
     if (!ac) throw (stream.getTracks().forEach((t) => t.stop()), new Error("no Web Audio"));
@@ -129,6 +150,15 @@ function createVoice({ rate = BRAWL_RULES.voiceRate } = {}) {
       (c.node.disconnect(), c.source.disconnect());
     } catch {}
     c.stream.getTracks().forEach((t) => t.stop());
+    restoreSession();
+  }
+
+  function restoreSession() {
+    if (prevSession === null) return;
+    try {
+      navigator.audioSession.type = prevSession;
+    } catch {}
+    prevSession = null;
   }
 
   // ---- playback
