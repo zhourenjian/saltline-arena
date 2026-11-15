@@ -21,6 +21,10 @@ Saltline Arena 是在 **[realskyrin/fps3ademo-saltline](https://github.com/reals
 
 > 许可说明：原项目仓库没有附带 LICENSE 文件。本项目里来自原项目的部分，版权归原作者；仓库里 Three.js 和字体的许可文本在 `licenses/`。本项目新增部分的许可证见 `LICENSE`（如果还没有，请先询问维护者再复用）。
 
+## 自己部署一个服务器
+
+`deploy/` 里有现成的 systemd 单元（`saltline-arena.service`）、nginx 配置（`nginx-saltline.conf`：静态站点 + `/ws` 反向代理到游戏服务器）和 `deploy.sh`（构建并同步到服务器）。游戏服务器只有 Node，没有额外依赖。页面在 HTTPS 站点默认端口上时，会自动连同域名下的 `wss://<域名>/ws`。
+
 ## 游戏截图
 
 ![Saltline 港口战斗场景](docs/screenshots/saltline-harbor.png)

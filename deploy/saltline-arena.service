@@ -1,0 +1,24 @@
+[Unit]
+Description=Saltline Arena game server (duel + brawl, WebSocket)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=nobody
+WorkingDirectory=/opt/saltline-arena
+ExecStart=/opt/node/bin/node server/duel-server.mjs
+Restart=on-failure
+RestartSec=3
+# small machine shared with other services
+MemoryMax=150M
+Environment=NODE_ENV=production
+Environment=PORT=8787
+Environment=HOST=127.0.0.1
+Environment=TRUST_PROXY=1
+Environment=ALLOWED_ORIGINS=https://saltline.kakoola.com,https://zhourenjian.github.io
+StandardOutput=append:/var/log/saltline-arena.log
+StandardError=append:/var/log/saltline-arena.log
+
+[Install]
+WantedBy=multi-user.target
