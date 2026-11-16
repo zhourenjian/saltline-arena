@@ -958,7 +958,7 @@ function createSoldierInstance(THREE, CFG) {
     if (wAds > 0.001) {
       // the eye is the player's camera (1.68 m standing, 1.05 m crouched), a little to the right and ahead along the
       // aim: the gun's line is then the line the player shoots along, so whoever is aimed at looks into the barrel
-      w.v.set(-0.034, lerp(1.68, 1.05, wCrouch), 0).add(w.v2.set(0, 0, 0.09).applyQuaternion(w.qa));
+      w.v.set(-0.1, lerp(1.68, 1.05, wCrouch), 0).add(w.v2.set(0, 0, 0.09).applyQuaternion(w.qa));
       const sp = held.sight;
       w.v2.set(arr(sp, 0), arr(sp, 1), arr(sp, 2)).applyQuaternion(weapon.quaternion);
       // slide the gun sideways and up only: along its own axis it stays where it was, so the stock stays at
