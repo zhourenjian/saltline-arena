@@ -98,8 +98,8 @@ function createMenus(context, e) {
         </div>
         <p class="m-wearing">Character <b data-f="char-name">Operator</b></p>
         <p class="m-install" hidden><a href="#" data-install>Play full screen: add to Home Screen \u203A</a></p>
-        <p class="m-note">Every surface, machine and sound is generated in your browser. Nothing is downloaded.</p>
         <p class="m-gh"><a href="https://github.com/zhourenjian/saltline-arena" target="_blank" rel="noopener noreferrer" data-gh>Available on GitHub \u203A</a></p>
+        <p class="m-gh"><a href="https://x.com/felixrieseberg/status/2119925633564463609" target="_blank" rel="noopener noreferrer">Original version by Felix Rieseberg \u203A</a></p>
       </div>
       <aside class="m-legend" aria-label="Controls at a glance">
         <div><span><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> Move</span><span><kbd>Mouse</kbd> Look</span><span><kbd>LMB</kbd> Fire</span><span><kbd>RMB</kbd> Aim</span><span><kbd>R</kbd> Reload</span></div>
