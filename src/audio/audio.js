@@ -1293,18 +1293,23 @@ function u_(i, e, t) {
         capture: !0,
         passive: !0,
       });
-    listen(
-      i,
-      document,
-      "visibilitychange",
-      () => {
-        try {
-          document.hidden ? e.suspend() : $ && e.resume();
-        } catch {}
-      },
-      void 0,
-      !1,
-    );
+    // Home button / another app / locked screen: Android browsers do not always set document.hidden
+    // right away (or at all for an installed app), so pagehide, freeze and, on touch devices, the
+    // window losing focus count as going away too
+    let away = (gone) => {
+      try {
+        gone ? e.suspend() : $ && e.resume();
+      } catch {}
+    };
+    listen(i, document, "visibilitychange", () => away(document.hidden), void 0, !1);
+    for (let type of ["pagehide"]) listen(i, window, type, () => away(!0), void 0, !1);
+    listen(i, document, "freeze", () => away(!0), void 0, !1);
+    listen(i, window, "pageshow", () => document.hidden || away(!1), void 0, !1);
+    listen(i, document, "resume", () => document.hidden || away(!1), void 0, !1);
+    if (window.matchMedia && matchMedia("(pointer: coarse)").matches) {
+      listen(i, window, "blur", () => away(!0), void 0, !1);
+      listen(i, window, "focus", () => document.hidden || away(!1), void 0, !1);
+    }
   }
   function lu(te) {
     te = Math.min(Math.max(+te || 0, 0), 0.25);

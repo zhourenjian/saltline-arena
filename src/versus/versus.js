@@ -5,6 +5,7 @@
 // peer's tracers) and hit claims ("I hit you in the head"), and applies whatever the server
 // decides. It is a friendly relay, not an anti-cheat: a modified client can still lie about
 // what it hit (the server only rate-limits and range-checks hits).
+import { randomCallsign } from "../brawl/names.js";
 import { Vector3 } from "../vendor/three-r180.js";
 import { DUEL_RULES, DUEL_SPAWNS, normalizeRoomCode, packLoco, sanitizeName, nameProblem } from "./rules.js";
 import { connectDuel, defaultServerUrl, normalizeServerUrl, loadVersusPrefs, saveVersusPrefs } from "./net.js";
@@ -300,7 +301,7 @@ function createVersus(context, avatars, options = {}) {
 
   function openLobby() {
     (ui.server && !ui.server.value && (ui.server.value = context.params.server || prefs.server || defaultServerUrl()),
-      ui.name && !ui.name.value && (ui.name.value = prefs.name || ""),
+      ui.name && !ui.name.value && (ui.name.value = prefs.name || randomCallsign()),
       renderRoom(),
       client || status(""));
     menus.show("versus");

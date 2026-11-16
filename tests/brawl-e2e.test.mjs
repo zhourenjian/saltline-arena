@@ -280,6 +280,7 @@ try {
   });
 
   await test("a silent default microphone: the game switches to the next input and remembers it", async () => {
+    await sleep(800); // the previous talk must be over on the server too, or the new grab is ignored
     await D.ev(`
       localStorage.removeItem("saltline.mic.v1");
       const ac = new AudioContext(), o = ac.createOscillator(), loud = ac.createMediaStreamDestination(), quiet = ac.createMediaStreamDestination();

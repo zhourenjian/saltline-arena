@@ -310,6 +310,26 @@ function createVoice({ rate = BRAWL_RULES.voiceRate } = {}) {
     return !0;
   }
 
+  // in the background nothing may keep sounding or recording
+  let away = (gone) => {
+    try {
+      if (gone) {
+        stop();
+        ctx && ctx.state === "running" && ctx.suspend();
+      } else if (ctx && ctx.state !== "closed") ctx.resume().catch(() => {});
+    } catch {}
+  };
+  let onHide = () => away(!0),
+    onShow = () => !document.hidden && away(!1),
+    coarse = !!(globalThis.matchMedia && matchMedia("(pointer: coarse)").matches);
+  document.addEventListener("visibilitychange", () => (document.hidden ? onHide() : onShow()));
+  for (let t of ["pagehide", "freeze"]) (t === "freeze" ? document : window).addEventListener(t, onHide);
+  for (let t of ["pageshow", "resume"]) (t === "resume" ? document : window).addEventListener(t, onShow);
+  // on a phone the page losing focus can mean the Home button; the microphone prompt also blurs it,
+  // so a recording in progress is left alone and only playback is held back
+  coarse &&
+    (window.addEventListener("blur", () => !capture && away(!0)), window.addEventListener("focus", onShow));
+
   return {
     start,
     stop,

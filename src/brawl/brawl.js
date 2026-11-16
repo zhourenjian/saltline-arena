@@ -16,6 +16,7 @@ import { BRAWL_RULES, sanitizeChat } from "./rules.js";
 import { createBrawlHud } from "./brawl-hud.js";
 import { createSpectatorCamera } from "./spectator.js";
 import { createVoice, canRecord, recordProblem } from "./voice.js";
+import { randomCallsign } from "./names.js";
 
 var ERRORS = {
   BRAWL_FULL: "The brawl lobby is full right now. Try again in a minute.",
@@ -586,6 +587,12 @@ function createBrawl(context, avatars) {
     entered && !voice.unlocked && voice.unlock() && lockedNoted && ((lockedNoted = 0), hud.note(""));
   }
   voice.onEvict = (id) => hud.expireVoice(id);
+  // the page went to the background (Home button, another app, a locked screen): never keep the
+  // microphone open there
+  let awayMic = () => document.hidden && mic && endMic();
+  document.addEventListener("visibilitychange", awayMic);
+  window.addEventListener("pagehide", () => mic && endMic());
+  offs.push(() => document.removeEventListener("visibilitychange", awayMic));
   window.addEventListener("pointerdown", unlockAudio, !0);
   window.addEventListener("keydown", unlockAudio, !0);
   offs.push(
@@ -775,7 +782,7 @@ function createBrawl(context, avatars) {
   // ---- menus
   function openLobby() {
     (ui.server && !ui.server.value && (ui.server.value = context.params.server || prefs.server || defaultServerUrl()),
-      ui.name && !ui.name.value && (ui.name.value = prefs.name || ""),
+      ui.name && !ui.name.value && (ui.name.value = prefs.name || randomCallsign()),
       client || status(""));
     menus.show("brawl");
   }
