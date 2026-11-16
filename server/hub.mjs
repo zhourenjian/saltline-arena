@@ -51,7 +51,13 @@ export function createDuelHub({
     throw new Error("no free room code");
   }
 
+  // Poses are replaced by the next one 50-100 ms later, so when a client's link is stalled
+  // (socket buffer already holding this much) they are dropped instead of queued: when the link
+  // recovers it gets the newest state, not a burst of old ones to replay.
+  const STALE_BACKLOG = 6000;
+  const droppable = (t, data) => t === "state" || t === "br.state" || (t === "br.snap" && !(data.shots && data.shots.length));
   function emit(client, t, data = {}) {
+    if (client.backlog && droppable(t, data) && client.backlog() > STALE_BACKLOG) return void (client.dropped = (client.dropped || 0) + 1);
     try {
       client.send(JSON.stringify({ t, ...data }));
     } catch (e) {
@@ -348,7 +354,7 @@ export function createDuelHub({
     tick: () => brawl.tick(),
     // key: who this connection is for mutes that must survive a reconnect (the server passes the
     // remote address); defaults to the connection id
-    connect(send, close = () => {}, { key = null } = {}) {
+    connect(send, close = () => {}, { key = null, backlog = null } = {}) {
       const id = "p" + nextId++;
       let tokens = messageBurst,
         tokensAt = now();
@@ -361,6 +367,8 @@ export function createDuelHub({
         hello: false,
         send,
         close,
+        backlog,
+        dropped: 0,
         lastPos: null,
         receive(text) {
           let m;

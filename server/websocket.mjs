@@ -45,6 +45,10 @@ export function acceptWebSocket(req, socket, { maxPayload = 16384 } = {}) {
     get closed() {
       return closed;
     },
+    // bytes written but not yet taken by the network (a stalled mobile link makes this grow)
+    get backlog() {
+      return socket.writableLength;
+    },
     send(text) {
       if (closed) return;
       socket.write(frame(0x1, Buffer.from(String(text), "utf8")));

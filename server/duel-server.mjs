@@ -21,6 +21,8 @@ import { createDuelHub } from "./hub.mjs";
 import { DUEL_PROTOCOL, DUEL_RULES } from "../src/versus/rules.js";
 import { brawlRulesFromEnv } from "../src/brawl/rules.js";
 
+const POSE = /"t":"(br\.)?state"/; // where a client puts "t" depends on its JSON key order
+
 export function startDuelServer({
   port = Number(process.env.PORT || 8787),
   host = process.env.HOST || "0.0.0.0",
@@ -81,10 +83,34 @@ export function startDuelServer({
     const client = hub.connect(
       (text) => ws.send(text),
       (code, reason) => ws.close(code, reason),
-      { key: ip },
+      { key: ip, backlog: () => ws.backlog },
     );
-    ws.onmessage = (text) => client.receive(text);
+    // After a stall on the player's own link, all the poses it queued arrive in one burst. Only the
+    // newest matters: keep the last pose of each burst and relay that once the burst is read.
+    let latestPose = null,
+      poseTimer = null,
+      lastPoseAt = 0;
+    const flushPose = () => {
+      const text = latestPose;
+      clearTimeout(poseTimer);
+      poseTimer = latestPose = null;
+      if (text === null) return;
+      lastPoseAt = Date.now();
+      client.receive(text);
+    };
+    ws.onmessage = (text) => {
+      if (POSE.test(text.slice(0, 24)) || POSE.test(text.slice(-24))) {
+        // the hub drops poses closer than 20 ms apart, which would keep the OLDEST of a burst:
+        // hold the newest and hand it over once the 20 ms spacing allows
+        latestPose = text;
+        poseTimer === null && (poseTimer = setTimeout(flushPose, Math.max(0, 22 - (Date.now() - lastPoseAt))));
+        return;
+      }
+      flushPose(); // keep the order: the pose that came before this message is handled first
+      client.receive(text);
+    };
     ws.onclose = () => {
+      clearTimeout(poseTimer);
       sockets.delete(ws);
       const n = (perIp.get(ip) || 1) - 1;
       n > 0 ? perIp.set(ip, n) : perIp.delete(ip);

@@ -52,12 +52,13 @@ function fakeWorld() {
     }
     t = end;
   };
-  const player = (name) => {
+  const player = (name, backlog = null) => {
     const inbox = [];
     let closed = null;
     const c = hub.connect(
       (s) => inbox.push(JSON.parse(s)),
       (code) => (closed = code),
+      { backlog },
     );
     const p = {
       c,
@@ -338,6 +339,28 @@ await test("locomotion relay: sanitizeLoco bounds climb state and drops unknown 
   assert.equal(packLoco({ ...base, held: { kind: "rifle" } }, null).held, undefined);
 });
 
+await test("poses are dropped (not queued) for a client whose link is backed up; events still go through", async () => {
+  const w = fakeWorld();
+  let stuck = 0;
+  const a = w.player("Alpha"),
+    b = w.player("Bravo", () => stuck);
+  a.send({ t: "create" });
+  b.send({ t: "join", code: a.last("room").code });
+  w.advance(DUEL_RULES.countdownSeconds + 0.01);
+  b.clear();
+  a.send({ t: "state", p: [1, 0, 0] });
+  assert.equal(b.all("state").length, 1);
+  stuck = 100000;
+  w.advance(0.1);
+  a.send({ t: "state", p: [2, 0, 0] });
+  assert.equal(b.all("state").length, 1, "stale pose not sent");
+  assert.equal(b.c.dropped, 1);
+  stuck = 0;
+  w.advance(0.1);
+  a.send({ t: "state", p: [3, 0, 0] });
+  assert.equal(b.last("state").p[0], 3, "newest pose goes out once the link drains");
+});
+
 console.log("duel server (real sockets)");
 
 if (typeof WebSocket !== "function") {
@@ -389,6 +412,11 @@ if (typeof WebSocket !== "function") {
       // a large (fragmented-size) message is accepted, an oversize one closes the socket
       a.send({ t: "ping", at: "x".repeat(8000) });
       assert.equal((await a.wait("pong")).at.length, 8000);
+      // a burst of poses (a stalled link catching up) is relayed as its newest pose
+      for (let i = 1; i <= 6; i++) a.send({ t: "state", p: [i, 0, 0], yaw: 0, pitch: 0 });
+      await new Promise((r) => setTimeout(r, 300));
+      const poses = b.inbox.filter((m) => m.t === "state");
+      assert.equal(poses[poses.length - 1].p[0], 6, "the newest pose arrives last");
       // netstat is accepted with junk values and never answered or fatal
       a.send({ t: "netstat", n: "x", avg: -5, p95: 1e12, max: null, via: "4g".repeat(20) });
       a.send({ t: "ping", at: 1 });
