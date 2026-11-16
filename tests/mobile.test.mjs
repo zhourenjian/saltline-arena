@@ -80,6 +80,21 @@ async function enterBrawl(page) {
 const rect = (page, sel) => page.ev(`const e = document.querySelector(${JSON.stringify(sel)}); if (!e) return null; const r = e.getBoundingClientRect(); return { x: r.x, y: r.y, w: r.width, h: r.height, shown: e.getClientRects().length > 0 && getComputedStyle(e).visibility !== "hidden" }`);
 const overlap = (a, b) => a && b && a.shown && b.shown && a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
 
+console.log("Fullscreen on Play");
+await test("Play goes fullscreen on a phone, once per tap, and only where the browser allows it", async () => {
+  const page = await phone("", spoof(ANDROID));
+  pages.push(page);
+  await page.ev(`window.__fs = 0; Element.prototype.requestFullscreen = function () { window.__fs++; return Promise.resolve(); };`);
+  await tap(page, 200, 420); // first touch: touch mode
+  await page.ev(`document.querySelector('.menu [data-act="brawl"]').click()`);
+  assert((await page.ev(`return window.__fs`)) === 1, "Play asked for fullscreen", await page.ev(`return window.__fs`));
+  await page.ev(`document.querySelector('[data-act="br-back"]').click()`);
+  assert((await page.ev(`return window.__fs`)) === 1, "Back does not");
+  // no element fullscreen API (iPhone Safari): nothing breaks
+  await page.ev(`window.__fs = 0; Element.prototype.requestFullscreen = undefined; Element.prototype.webkitRequestFullscreen = undefined; document.querySelector('.menu [data-act="brawl"]').click()`);
+  assert((await page.ev(`return window.__G.game.menus.screen`)) === "brawl", "the card still opens without the API");
+});
+
 console.log("Home Screen");
 await test("manifest, icons and the Home Screen meta tags are published", async () => {
   const html = readFileSync(path.join(STANDALONE, "index.html"), "utf8");

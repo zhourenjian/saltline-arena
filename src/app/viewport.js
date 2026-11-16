@@ -129,6 +129,7 @@ function installViewport(context) {
     show();
   }
   installKeyboardLift(context);
+  installAutoFullscreen(context);
   measure();
   return { measure, get size() { return size; } };
 }
@@ -180,6 +181,42 @@ function installKeyboardLift(context) {
     listen(context, window.visualViewport, "scroll", () => field && lift(), void 0, !1);
   }
   return { lift, get shift() { return shift; } };
+}
+
+// Pressing Play (or any button that starts a match) on a phone or tablet goes fullscreen when the
+// browser lets this page: the request must come from the tap itself. Browsers without an element
+// fullscreen API (iPhone Safari) simply do nothing; a Home Screen app already runs fullscreen.
+// Desktops are left alone (Esc would leave fullscreen and pause the game).
+var PLAY_ACTS = new Set(["brawl", "br-enter", "br-watch", "br-watch-only", "deploy", "vs-create", "vs-join"]);
+function installAutoFullscreen(context) {
+  let coarse = () => {
+    try {
+      return matchMedia("(pointer: coarse)").matches || !!document.documentElement.classList.contains("is-touch");
+    } catch {
+      return !1;
+    }
+  };
+  listen(
+    context,
+    document,
+    "click",
+    (e) => {
+      let b = e.target && e.target.closest && e.target.closest("[data-act]");
+      if (!b || !PLAY_ACTS.has(b.dataset.act) || !coarse() || isStandalone()) return;
+      if (document.fullscreenElement || document.webkitFullscreenElement) return;
+      if (document.fullscreenEnabled === !1 || document.webkitFullscreenEnabled === !1) return;
+      let el = document.getElementById("app") || document.documentElement,
+        ask = el.requestFullscreen || el.webkitRequestFullscreen;
+      if (!ask) return;
+      try {
+        let r = ask.call(el, { navigationUI: "hide" });
+        r && r.catch && r.catch(() => {});
+      } catch {}
+    },
+    { capture: !0 },
+    !1,
+  );
+  for (let type of ["fullscreenchange", "webkitfullscreenchange"]) listen(context, document, type, () => context.viewport && context.viewport.measure && context.viewport.measure({ type }), void 0, !1);
 }
 
 export { installViewport };
