@@ -11,14 +11,14 @@ import { Vector3 } from "../vendor/three-r180.js";
 import { createOpponent } from "../versus/opponent.js";
 
 var BATTLE = {
-  bots: 4,
+  bots: 2,
   avatars: ["swat-operator", "masked-raider"],
-  ring: 3.0, // fighters stay within this radius of the spot centre
-  speed: 2.7, // m/s
+  ring: 5.5, // fighters stay within this radius of the spot centre (they start ~10 m apart)
+  speed: 3.3, // m/s
   hz: 20, // pose rate fed to the bodies
   respawnSeconds: 2.6,
-  distances: [8, 10, 12, 15, 19],
-  laterals: [0, -4, 4, -8, 8],
+  distances: [9, 11, 13, 16, 20, 25],
+  laterals: [0, -3, 3, -6, 6, -10, 10],
 };
 
 function battleWanted() {
@@ -38,6 +38,7 @@ function createTitleBattle(context, avatars, random = Math.random) {
   let bots = [],
     spot = null, // { x, z, y }: the centre of the open ground the fighters use
     spotClock = 0,
+    spotSide = 0,
     poseClock = 0,
     shots = 0,
     kills = 0,
@@ -65,6 +66,13 @@ function createTitleBattle(context, avatars, random = Math.random) {
   function openAt(x, z, camY) {
     let g = ground(x, z, camY + 3);
     if (g == null || camY - g < 0.8 || camY - g > 10) return null;
+    // never over the sea: the ground and the ring around it must all be dry
+    try {
+      let w = ph().raycast(a.set(x, g + 3, z), b.set(0, -1, 0), 8);
+      if (!w || w.surface === "water") return null;
+    } catch {
+      return null;
+    }
     for (let i = 0; i < 8; i++) {
       let ang = (i / 8) * Math.PI * 2,
         dx = Math.cos(ang),
@@ -72,9 +80,11 @@ function createTitleBattle(context, avatars, random = Math.random) {
         px = x + dx * (BATTLE.ring + 0.4),
         pz = z + dz * (BATTLE.ring + 0.4),
         gg = ground(px, pz, g + 2.5);
-      if (gg == null || Math.abs(gg - g) > 0.4) return null;
+      if (gg == null || Math.abs(gg - g) > 0.5) return null;
       try {
-        if (ph().raycast(a.set(x, g + 0.9, z), b.set(dx, 0, dz), BATTLE.ring + 0.5)) return null;
+        let w = ph().raycast(a.set(px, gg + 3, pz), b.set(0, -1, 0), 8);
+        if (!w || w.surface === "water") return null;
+        if (ph().raycast(a.set(x, g + 0.9, z), b.set(dx, 0, dz), BATTLE.ring * 0.7)) return null;
       } catch {
         return null;
       }
@@ -143,14 +153,16 @@ function createTitleBattle(context, avatars, random = Math.random) {
       burst: 0, // shots left in the burst
       nextShot: rnd(0.4, 1.6),
       deadFor: 0,
+      side: i * Math.PI + (spotSide += 0),
       placed: !1,
     };
   }
 
   function place(bot, instant) {
     if (!spot) return;
-    let ang = random() * Math.PI * 2,
-      r = Math.sqrt(random()) * BATTLE.ring * 0.8;
+    // each fighter holds its own side of the spot, so they open fire from a distance
+    let ang = bot.side + rnd(-0.3, 0.3),
+      r = BATTLE.ring * rnd(0.7, 0.9);
     bot.p.set(spot.x + Math.cos(ang) * r, spot.y, spot.z + Math.sin(ang) * r);
     bot.goal.copy(bot.p);
     bot.v.set(0, 0, 0);
@@ -218,10 +230,11 @@ function createTitleBattle(context, avatars, random = Math.random) {
       bot.v.set(0, 0, 0);
       bot.hold -= dt;
       if (bot.hold <= 0) {
-        let ang = random() * Math.PI * 2,
-          r = Math.sqrt(random()) * BATTLE.ring;
+        // run around on its own side of the spot, never across to the other fighter
+        let ang = bot.side + rnd(-1.0, 1.0),
+          r = BATTLE.ring * rnd(0.45, 0.95);
         bot.goal.set(spot.x + Math.cos(ang) * r, bot.p.y, spot.z + Math.sin(ang) * r);
-        bot.hold = rnd(0.2, 1.1);
+        bot.hold = rnd(0, 0.25);
       }
     } else {
       bot.v.copy(toGoal.multiplyScalar(BATTLE.speed / dist));
@@ -294,8 +307,15 @@ function createTitleBattle(context, avatars, random = Math.random) {
     bots.length || (bots = Array.from({ length: BATTLE.bots }, (_, i) => newBot(i)));
     spotClock -= dt;
     if (spotClock <= 0) {
-      spotClock = spot ? 0.8 : 0.4;
-      (!spot || !spotInView()) && pickSpot();
+      spotClock = spot ? 0.3 : 0.4;
+      if (!spot || !spotInView()) {
+        pickSpot();
+        // nowhere good in view (indoors, by the water, mid-turn): nobody fights until there is
+        if (spot && !spotInView()) {
+          for (let bot of bots) (bot.opp.reset(), (bot.placed = !1));
+          spot = null;
+        }
+      }
     }
     if (!spot) return;
     for (let bot of bots) bot.placed || place(bot, !0);

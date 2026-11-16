@@ -35,7 +35,9 @@ try {
     await page.waitFor(`__G.titleBattle && __G.titleBattle.stats().visible >= 2`, 15000);
     await page.waitFor(`__G.titleBattle.stats().shots >= 3`, 8000);
     const st = await page.ev(`return __G.titleBattle.stats()`);
-    ok(st.bots === 4 && st.spot, "bots", st);
+    ok(st.bots === 2 && st.spot, "bots", st);
+    const gap = Math.hypot(st.at[0][0] - st.at[1][0], st.at[0][2] - st.at[1][2]);
+    ok(gap > 4, "fighters stay apart", st);
     page.close();
   });
   await test("?battle=0 has no fight; leaving the title hides the fighters", async () => {
