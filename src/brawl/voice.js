@@ -47,7 +47,9 @@ function createVoice({ rate = BRAWL_RULES.voiceRate } = {}) {
     clips = new Map(), // message id → [{ seq, data }] kept for replay, oldest first
     onEvict = null,
     prevSession = null, // navigator.audioSession.type before the recording (iOS Safari)
-    volume = 1;
+    volume = 1,
+    level = 0, // recent microphone peak (0..1) before the auto gain
+    playing = 0; // when the last clip is expected to end (audio-clock seconds)
 
   function audio() {
     if (!ctx) {
@@ -114,14 +116,23 @@ function createVoice({ rate = BRAWL_RULES.voiceRate } = {}) {
         // input samples per output sample
         step: ac.sampleRate / rate,
         phase: 0,
+        gain: 1, // software auto gain: phones' raw microphones are often very quiet
         onChunk,
       };
     node.onaudioprocess = (e) => {
       if (capture !== c) return;
-      let input = e.inputBuffer.getChannelData(0);
+      let input = e.inputBuffer.getChannelData(0),
+        peak = 0;
+      for (let i = 0; i < input.length; i++) peak = Math.max(peak, Math.abs(input[i]));
+      level = Math.max(peak, level * 0.9);
+      // bring speech to about 0.6 of full scale (at most 12x); do not pump up the background hiss
+      if (peak > 0.004) {
+        let want = Math.max(1, Math.min(12, 0.6 / peak));
+        c.gain += (want - c.gain) * (want < c.gain ? 0.8 : 0.2);
+      }
       // box-filter downsample to `rate`
       for (let i = 0; i < input.length; i++) {
-        c.acc += input[i];
+        c.acc += input[i] * c.gain;
         c.accN++;
         c.phase += 1;
         if (c.phase >= c.step) {
@@ -200,6 +211,7 @@ function createVoice({ rate = BRAWL_RULES.voiceRate } = {}) {
     let at = Math.max(p.next, ac.currentTime + VOICE.jitterSeconds);
     src.start(at);
     p.next = at + buffer.duration;
+    playing = Math.max(playing, p.next);
     p.last = ac.currentTime;
     // forget finished clips
     for (let [id, q] of players) ac.currentTime - q.last > 15 && (q.gain.disconnect(), players.delete(id));
@@ -253,6 +265,7 @@ function createVoice({ rate = BRAWL_RULES.voiceRate } = {}) {
       src.start(at);
       at += buffer.duration;
     }
+    playing = Math.max(playing, at);
     return !0;
   }
 
@@ -263,6 +276,19 @@ function createVoice({ rate = BRAWL_RULES.voiceRate } = {}) {
     record,
     playClip,
     hasClip: (msg) => clips.has(msg),
+    // a voice clip is sounding (or about to): the game turns its music down meanwhile
+    get busy() {
+      return !!ctx && ctx.currentTime < playing + 0.15;
+    },
+    get level() {
+      return level;
+    },
+    // loudest sample of a kept clip (0..1), to tell a silent recording from a quiet one
+    clipPeak(msg) {
+      let peak = 0;
+      for (let { data } of clips.get(msg) || []) for (let b of fromBase64(data)) peak = Math.max(peak, Math.abs(muLawDecode(b)));
+      return peak;
+    },
     get clipCount() {
       return clips.size;
     },

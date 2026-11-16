@@ -172,6 +172,7 @@ function iC() {
     setIntensity: i,
     setInterior: i,
     setVolume: i,
+    setMusicDuck: i,
     setPaused: i,
     debug: () => ({
       state: "none",
@@ -421,6 +422,8 @@ function u_(i, e, t) {
     },
     $ = !1,
     ue = !1,
+    duckTo = 1, // music level while somebody's voice message plays (see setMusicDuck)
+    duckNow = 1,
     me = 0.9,
     ee = (i.game && i.game.state) || "title",
     B = 0,
@@ -1393,7 +1396,8 @@ function u_(i, e, t) {
     if (
       ((L += (ct - L) * ye(2)),
       (J += (1 - J) * ye(3.5)),
-      (O.gain.value = J * (ue ? 0.45 : 1)),
+      (duckNow += (duckTo - duckNow) * ye(5)),
+      (O.gain.value = J * oe * duckNow), // oe fades to 0 while paused (the music scheduler is also stopped then)
       Xe.on)
     ) {
       let De = we(L),
@@ -1664,6 +1668,10 @@ function u_(i, e, t) {
       },
       setPaused(te) {
         ue = !!te;
+      },
+      // 1 = normal; lower turns the music down (smoothly) so a voice message can be heard
+      setMusicDuck(te) {
+        duckTo = pi(+te, 0, 1);
       },
       names: Object.keys(Go).filter((te) => !Go[te].ir),
       get intensity() {

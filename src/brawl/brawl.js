@@ -614,7 +614,8 @@ function createBrawl(context, avatars) {
   // the speaker is told how many spectators are listening (voice never reaches the players)
   function micText() {
     let n = mic.listeners | 0;
-    return `🔴 Talking · ${Math.ceil(mic.left)} s · ` + (n ? `${n} listening` : "nobody is listening (only spectators hear voice)");
+    let bars = "▁▂▃▄▅▆▇".charAt(Math.min(6, Math.floor(Math.sqrt(voice.level) * 7)));
+    return `🔴 ${bars} Talking · ${Math.ceil(mic.left)} s · ` + (n ? `${n} listening` : "nobody is listening (only spectators hear voice)");
   }
 
   function endMic(fromServer = !1) {
@@ -639,7 +640,12 @@ function createBrawl(context, avatars) {
     if (game.mode !== "brawl") return;
     // tags: only for players actually in view (never through walls)
     for (let r of remotes.values()) r.tag.update(r.opp.headPosition, r.opp.visible && r.opp.alive);
+    // music down while a voice message plays
+    context.audio && context.audio.setMusicDuck && context.audio.setMusicDuck(voice.busy ? 0.15 : 1);
     if (mic && mic.ok) {
+      // a microphone that delivers only silence (permission, wrong input, iOS muted it) says so
+      mic.quiet = voice.level < 0.003 ? (mic.quiet || 0) + dt : 0;
+      mic.quiet > 1.2 && hud.note("🎙 The microphone is silent — check the browser's microphone permission or input.");
       mic.left -= dt;
       mic.left <= 0
         ? (endMic(), hud.note("Mic time is up."))
@@ -867,7 +873,7 @@ function createBrawl(context, avatars) {
       game.keepPlayingOnUnlock = !1;
       let i = context.frameHooks.indexOf(frame);
       i >= 0 && context.frameHooks.splice(i, 1);
-      (offs.forEach((f) => f()), clearRemotes(), voice.dispose(), hud.dispose(), spectator.stop());
+      (offs.forEach((f) => f()), clearRemotes(), voice.dispose(), context.audio && context.audio.setMusicDuck && context.audio.setMusicDuck(1), hud.dispose(), spectator.stop());
       context.brawl === api && (context.brawl = null);
     },
   };

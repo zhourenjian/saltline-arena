@@ -270,6 +270,8 @@ try {
     assert(!(await A.ev(`return window.__played`)), "players hear nothing");
     // the clip is kept and the ▶ button plays it again (also for a listener whose audio was locked)
     assert((await C.ev(`return __G.brawl.voice.clipCount`)) >= 1, "the clip is kept for replay");
+    const peak = await C.ev(`const id = [...document.querySelectorAll('.br-chat-l li.voice button[data-br="replay"]')].pop().dataset.msg; return __G.brawl.voice.clipPeak(+id)`);
+    assert(peak > 0.2, "the recorded clip carries the microphone signal (auto gain brings it up)", peak);
     const rb = await C.ev(`return !!document.querySelector('.br-chat-l li.voice button[data-br="replay"]')`);
     assert(rb, "a voice message has a ▶ button");
     await C.ev(`window.__replayed = 0; const pc = __G.brawl.voice.playClip; __G.brawl.voice.playClip = async (...a) => { const r = await pc(...a); window.__replayed = r ? 1 : -1; return r; }; document.querySelector('.br-chat-l li.voice button[data-br="replay"]').click()`);
