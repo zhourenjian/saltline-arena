@@ -263,10 +263,18 @@ try {
     await D.waitFor(`__G.brawl.mic && __G.brawl.mic.ok`, 5000);
     await C.waitFor(`window.__played >= 2`, 5000);
     await C.waitFor(`document.querySelector('.br-talking').textContent.includes("Delta")`, 3000);
+    assert(/\d+ listening/.test(await D.ev(`return __G.brawl.hud.chatLines.length ? document.querySelector('.br-mic, [data-br="mic-down"]').textContent : ""`)), "the speaker sees how many are listening");
     await D.keyUp("KeyV");
     await D.waitFor(`!__G.brawl.mic`, 3000);
     await C.waitFor(`!document.querySelector('.br-talking').textContent`, 3000);
     assert(!(await A.ev(`return window.__played`)), "players hear nothing");
+    // the clip is kept and the ▶ button plays it again (also for a listener whose audio was locked)
+    assert((await C.ev(`return __G.brawl.voice.clipCount`)) >= 1, "the clip is kept for replay");
+    const rb = await C.ev(`return !!document.querySelector('.br-chat-l li.voice button[data-br="replay"]')`);
+    assert(rb, "a voice message has a ▶ button");
+    await C.ev(`window.__replayed = 0; const pc = __G.brawl.voice.playClip; __G.brawl.voice.playClip = async (...a) => { const r = await pc(...a); window.__replayed = r ? 1 : -1; return r; }; document.querySelector('.br-chat-l li.voice button[data-br="replay"]').click()`);
+    await C.waitFor(`window.__replayed !== 0`, 3000);
+    assert((await C.ev(`return window.__replayed`)) === 1, "the replay plays");
   });
 
   await test("Tab frees the mouse without pausing; a real click reaches 👎; Tab takes it back", async () => {

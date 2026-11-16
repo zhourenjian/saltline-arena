@@ -371,6 +371,8 @@ await test("mic: up to 3 speakers, 3 grabs a minute, 10 s each, voice only to sp
   talkers.forEach((t) => t.send({ t: "br.mic", on: true }));
   assert.deepEqual(talkers.map((t) => t.last("br.mic").ok), [true, true, true, false]);
   assert.equal(talkers[3].last("br.mic").code, "MIC_BUSY");
+  // each speaker is told how many spectators can hear them (everyone not on the field, not themselves)
+  assert.equal(talkers[0].last("br.mic").listeners, talkers.length - 1 + 1, "the other talkers and the ear");
   talkers[0].send({ t: "br.voice", seq: 1, data: Buffer.alloc(2000, 0x7f).toString("base64") });
   assert.equal(ear.last("br.voice").from, talkers[0].id);
   assert.equal(player.all("br.voice").length, 0, "the player hears nothing");

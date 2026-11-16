@@ -8,6 +8,7 @@
 import { BRAWL_RULES, muLawEncode, muLawDecode } from "./rules.js";
 
 var VOICE = {
+  keepClips: 20, // the last N voice messages stay in memory so they can be played again
   chunkSeconds: 0.25,
   jitterSeconds: 0.15, // playback starts this far behind the first chunk
 };
@@ -43,6 +44,8 @@ function createVoice({ rate = BRAWL_RULES.voiceRate } = {}) {
   let ctx = null,
     capture = null, // { stream, source, node, buf, fill, acc, accN, step, onChunk }
     players = new Map(), // msg id → { next, gain }
+    clips = new Map(), // message id → [{ seq, data }] kept for replay, oldest first
+    onEvict = null,
     prevSession = null, // navigator.audioSession.type before the recording (iOS Safari)
     volume = 1;
 
@@ -60,6 +63,11 @@ function createVoice({ rate = BRAWL_RULES.voiceRate } = {}) {
   // resume() only works inside one. Clips from other people arrive from the network, never in a
   // gesture, so the page calls unlock() on every click / key press while in the brawl.
   function unlock() {
+    // iPhone: Web Audio is silenced by the ring/silent switch unless the page declares it is
+    // playing media (iOS 17+); without this, clips from others are inaudible with the switch on
+    try {
+      onIOS() && navigator.audioSession && !capture && navigator.audioSession.type !== "playback" && (navigator.audioSession.type = "playback");
+    } catch {}
     let ac = audio();
     return !!ac && ac.state === "running";
   }
@@ -198,10 +206,69 @@ function createVoice({ rate = BRAWL_RULES.voiceRate } = {}) {
     return !0;
   }
 
+  // ---- replay: every clip that was heard (or could not be, because audio was still locked) is kept
+  function record(msg, seq, data) {
+    if (!msg || typeof data != "string") return;
+    let list = clips.get(msg);
+    if (!list) {
+      list = [];
+      clips.set(msg, list);
+      while (clips.size > VOICE.keepClips) {
+        let old = clips.keys().next().value;
+        clips.delete(old);
+        onEvict && onEvict(old);
+      }
+    }
+    list.push({ seq: seq | 0, data });
+  }
+
+  // plays a kept clip from the start. Call it from a click: that also unlocks the audio.
+  async function playClip(msg) {
+    let list = clips.get(msg);
+    if (!list || !list.length) return !1;
+    let ac = audio();
+    if (!ac) return !1;
+    try {
+      ac.state !== "running" && (await ac.resume());
+    } catch {}
+    if (ac.state !== "running") return !1;
+    let gain = ac.createGain(),
+      at = ac.currentTime + 0.08;
+    gain.gain.value = volume;
+    gain.connect(ac.destination);
+    for (let { data } of [...list].sort((a, b) => a.seq - b.seq)) {
+      let bytes;
+      try {
+        bytes = fromBase64(data);
+      } catch {
+        continue;
+      }
+      if (!bytes.length) continue;
+      let buffer = ac.createBuffer(1, bytes.length, rate),
+        ch = buffer.getChannelData(0);
+      for (let i = 0; i < bytes.length; i++) ch[i] = muLawDecode(bytes[i]);
+      let src = ac.createBufferSource();
+      src.buffer = buffer;
+      src.connect(gain);
+      src.start(at);
+      at += buffer.duration;
+    }
+    return !0;
+  }
+
   return {
     start,
     stop,
     play,
+    record,
+    playClip,
+    hasClip: (msg) => clips.has(msg),
+    get clipCount() {
+      return clips.size;
+    },
+    set onEvict(fn) {
+      onEvict = fn;
+    },
     unlock,
     get unlocked() {
       return !!ctx && ctx.state === "running";
@@ -225,6 +292,7 @@ function createVoice({ rate = BRAWL_RULES.voiceRate } = {}) {
           p.gain.disconnect();
         } catch {}
       players.clear();
+      clips.clear();
       ctx && ctx.close().catch(() => {});
       ctx = null;
     },

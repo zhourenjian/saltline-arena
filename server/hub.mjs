@@ -40,7 +40,14 @@ export function createDuelHub({
     clients = new Set();
   let nextId = 1;
   // emit is a hoisted function declaration, so the brawl can use it right away
-  const brawl = createBrawl({ rules: brawlRules, now, random, emit, log });
+  const emitRaw = (client, text) => {
+    try {
+      client.send(text);
+    } catch (e) {
+      log("send failed", e);
+    }
+  };
+  const brawl = createBrawl({ rules: brawlRules, now, random, emit, emitRaw, log });
 
   function newCode() {
     for (let tries = 0; tries < 1000; tries++) {

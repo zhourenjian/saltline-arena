@@ -225,6 +225,7 @@ function createBrawlHud(context, { onAction } = {}) {
         downs = el("span", "downs", m.downs ? `👎 ${m.downs}` : "");
       li.append(who, text, downs);
       m.from !== me && li.append(button("👎", "down", { msg: m.id }));
+      m.kind === "voice" && li.append(button("▶", "replay", { msg: m.id }));
       chatList.append(li);
       rows.set(m.id, { li, downs });
       while (chatList.children.length > 80) {
@@ -236,7 +237,13 @@ function createBrawlHud(context, { onAction } = {}) {
     },
     vote(id, n, mine) {
       let r = rows.get(id);
-      r && ((r.downs.textContent = n ? `👎 ${n}` : ""), mine && r.li.querySelector("button") && r.li.querySelector("button").remove());
+      r && ((r.downs.textContent = n ? `👎 ${n}` : ""), mine && r.li.querySelector('button[data-br="down"]') && r.li.querySelector('button[data-br="down"]').remove());
+    },
+    // a voice message that is no longer kept (only the last few are): its ▶ goes away
+    expireVoice(id) {
+      let r = rows.get(id),
+        b = r && r.li.querySelector('button[data-br="replay"]');
+      b && b.remove();
     },
     setTalking(list) {
       talking.textContent = list.length ? `🎙 ${list.map((t) => t.name).join(", ")}` : "";

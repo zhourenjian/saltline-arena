@@ -432,15 +432,16 @@ function createBrawl(context, avatars) {
     });
     on("br.voice", (m) => {
       if (role === "playing" || silenced.has(m.msg)) return;
+      voice.record(m.msg, m.seq, m.data); // kept for the ▶ button, even when it cannot play right now
       voice.play(m.msg, m.data) || audioLocked();
     });
     on("br.mic", (m) => {
       if (m.ok) {
         if (!mic || !mic.want) return void c.send("br.mic", { on: !1 });
-        ((mic.ok = !0), (mic.msg = m.msg), (mic.left = m.seconds), (mic.warn = m.warn));
-        for (let d of mic.pending.splice(0)) c.send("br.voice", { seq: micSeq++, data: d });
+        ((mic.ok = !0), (mic.msg = m.msg), (mic.left = m.seconds), (mic.warn = m.warn), (mic.listeners = m.listeners | 0));
+        for (let d of mic.pending.splice(0)) (voice.record(mic.msg, micSeq, d), c.send("br.voice", { seq: micSeq++, data: d }));
         hud.addMessage({ id: m.msg, kind: "voice", from: me(), name: myName(), downs: 0 }, me());
-        hud.setMic(`🔴 Talking · ${Math.ceil(mic.left)} s`, !0);
+        hud.setMic(micText(), !0);
         context.events.emit("brawl:mic", { on: !0 });
         return;
       }
@@ -516,6 +517,10 @@ function createBrawl(context, avatars) {
     if (a === "chat-close") return closeChat();
     if (a === "down")
       return (data.msg && (client.send("br.down", { msg: data.msg }), silenced.add(data.msg), voice.silence(data.msg), hud.vote(data.msg, null, !0)), void 0);
+    if (a === "replay") {
+      if (!data.msg) return;
+      return void voice.playClip(data.msg).then((ok) => ok || hud.note(voice.hasClip(data.msg) ? "Audio is still locked — tap once more." : "That voice message is no longer kept."));
+    }
     if (a === "mic-down") return void startMic();
     if (a === "mic-up") return void endMic();
   }
@@ -575,11 +580,12 @@ function createBrawl(context, avatars) {
   let lockedNoted = 0;
   function audioLocked() {
     let t = performance.now();
-    t - lockedNoted > 4000 && ((lockedNoted = t), hud.note("🔇 Someone is talking — click or press any key to hear voice."));
+    t - lockedNoted > 4000 && ((lockedNoted = t), hud.note("🔇 Someone is talking — click or press any key to hear voice (▶ in the chat plays it again)."));
   }
   function unlockAudio() {
     entered && !voice.unlocked && voice.unlock() && lockedNoted && ((lockedNoted = 0), hud.note(""));
   }
+  voice.onEvict = (id) => hud.expireVoice(id);
   window.addEventListener("pointerdown", unlockAudio, !0);
   window.addEventListener("keydown", unlockAudio, !0);
   offs.push(
@@ -598,11 +604,17 @@ function createBrawl(context, avatars) {
     voice
       .start((data) => {
         if (mic !== mine || !client) return;
-        mine.ok ? client.send("br.voice", { seq: micSeq++, data }) : mine.pending.length < 8 && mine.pending.push(data);
+        mine.ok ? (voice.record(mine.msg, micSeq, data), client.send("br.voice", { seq: micSeq++, data })) : mine.pending.length < 8 && mine.pending.push(data);
       })
       .catch((e) => {
         mic === mine && (endMic(), hud.note(`Microphone unavailable: ${(e && e.message) || e}`));
       });
+  }
+
+  // the speaker is told how many spectators are listening (voice never reaches the players)
+  function micText() {
+    let n = mic.listeners | 0;
+    return `🔴 Talking · ${Math.ceil(mic.left)} s · ` + (n ? `${n} listening` : "nobody is listening (only spectators hear voice)");
   }
 
   function endMic(fromServer = !1) {
@@ -631,7 +643,7 @@ function createBrawl(context, avatars) {
       mic.left -= dt;
       mic.left <= 0
         ? (endMic(), hud.note("Mic time is up."))
-        : hud.setMic(mic.left <= mic.warn ? `🔴 ${Math.ceil(mic.left)} s left` : `🔴 Talking · ${Math.ceil(mic.left)} s`, !0);
+        : hud.setMic(mic.left <= mic.warn ? `🔴 ${Math.ceil(mic.left)} s left` : micText(), !0);
     }
     if (role !== "playing") {
       // spectators: the player body stays parked; the spectator camera owns the view

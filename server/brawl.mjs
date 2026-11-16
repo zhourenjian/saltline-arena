@@ -29,6 +29,7 @@ export function createBrawl({
   now = () => Date.now() / 1000,
   random = Math.random,
   emit, // (client, type, data)
+  emitRaw = null, // (client, text): send an already-serialized message (voice goes to hundreds at once)
   log = () => {},
 } = {}) {
   const R = rules,
@@ -49,7 +50,9 @@ export function createBrawl({
   const send = (m, t, d) => emit(m.client, t, d);
   const spectators = () => [...members.values()].filter((m) => m.role !== "playing");
   const toSpectators = (t, d, except = null) => {
-    for (const m of members.values()) m.role !== "playing" && m !== except && send(m, t, d);
+    // serialize once for everybody: a voice chunk goes to every spectator, four times a second
+    const text = emitRaw && t === "br.voice" ? JSON.stringify({ t, ...d }) : null;
+    for (const m of members.values()) m.role !== "playing" && m !== except && (text ? emitRaw(m.client, text) : send(m, t, d));
   };
   const muteKeyFor = (c) => `${c.key || c.id}|${String(c.name || "").toLowerCase()}`;
   const keyOf = (m) => m.muteKey || muteKeyFor(m.client);
@@ -375,8 +378,10 @@ export function createBrawl({
 
   function endMic(m, why = "released") {
     if (!m.talk) return;
-    const msg = m.talk.msg;
+    const msg = m.talk.msg,
+      talked = m.talk;
     m.talk = null;
+    log(`voice: ${m.client.name || m.client.id} talked ${Math.round((now() - talked.start) * 10) / 10}s, ${talked.bytes} B to ${talked.listeners} listeners (${why})`);
     send(m, "br.mic", { ok: false, ended: why });
     toSpectators("br.talk", { id: m.client.id, msg, on: false }, m);
   }
@@ -565,8 +570,10 @@ export function createBrawl({
       if (talking >= R.micMaxSpeakers) return fail("MIC_BUSY", `${talking} people are already talking`);
       grabs.push(now());
       const v = addMessage(m, "voice", "");
-      m.talk = { until: now() + R.micSeconds, msg: v.id, bytes: 0 };
-      send(m, "br.mic", { ok: true, seconds: R.micSeconds, warn: R.micWarnSeconds, msg: v.id, rate: R.voiceRate });
+      // everybody who is not on the field hears it; the speaker is told how many that is
+      const listeners = spectators().filter((x) => x !== m).length;
+      m.talk = { until: now() + R.micSeconds, msg: v.id, bytes: 0, start: now(), listeners };
+      send(m, "br.mic", { ok: true, seconds: R.micSeconds, warn: R.micWarnSeconds, msg: v.id, rate: R.voiceRate, listeners });
       toSpectators("br.chat", msgView(v), m);
       toSpectators("br.talk", { id: c.id, name: c.name, msg: v.id, on: true }, m);
     },
