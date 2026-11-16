@@ -11,11 +11,14 @@ ExecStart=/opt/node/bin/node server/duel-server.mjs
 Restart=on-failure
 RestartSec=3
 # small machine shared with other services
-MemoryMax=150M
+MemoryMax=200M
 Environment=NODE_ENV=production
 Environment=PORT=8787
 Environment=HOST=127.0.0.1
 Environment=TRUST_PROXY=1
+# WebRTC data channel for poses: one UDP port, and the public address (the VM only knows its private one)
+Environment=RTC_PORT=40000
+Environment=RTC_PUBLIC_IP=47.86.23.119
 Environment=ALLOWED_ORIGINS=https://saltline.kakoola.com,https://zhourenjian.github.io
 StandardOutput=append:/var/log/saltline-arena.log
 StandardError=append:/var/log/saltline-arena.log

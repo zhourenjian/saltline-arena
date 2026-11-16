@@ -18,6 +18,7 @@ import http from "node:http";
 import { fileURLToPath } from "node:url";
 import { acceptWebSocket } from "./websocket.mjs";
 import { createDuelHub } from "./hub.mjs";
+import { createRtc } from "./rtc.mjs";
 import { DUEL_PROTOCOL, DUEL_RULES } from "../src/versus/rules.js";
 import { brawlRulesFromEnv } from "../src/brawl/rules.js";
 
@@ -37,7 +38,10 @@ export function startDuelServer({
   trustProxy = env.TRUST_PROXY === "1",
 } = {}) {
   const log = quiet ? () => {} : (...a) => console.log("[duel]", ...a);
-  const hub = createDuelHub({ log, brawlRules: brawlRulesFromEnv(env) });
+  // WebRTC is on when the module loads and RTC_PORT is set (RTC_PUBLIC_IP: the address players reach us at)
+  const rtc = env.RTC_PORT || env.RTC_PUBLIC_IP ? createRtc({ publicIp: env.RTC_PUBLIC_IP || "", port: Number(env.RTC_PORT || 40000), log }) : null;
+  rtc && log(`webrtc data channel on udp ${env.RTC_PORT || 40000}${env.RTC_PUBLIC_IP ? ` as ${env.RTC_PUBLIC_IP}` : ""}`);
+  const hub = createDuelHub({ log, brawlRules: brawlRulesFromEnv(env), rtc: !!rtc });
   const sockets = new Set(),
     perIp = new Map();
   const ticker = setInterval(() => hub.tick(), 100);
@@ -80,10 +84,11 @@ export function startDuelServer({
     if (!ws) return;
     sockets.add(ws);
     perIp.set(ip, (perIp.get(ip) || 0) + 1);
+    let link = null;
     const client = hub.connect(
       (text) => ws.send(text),
       (code, reason) => ws.close(code, reason),
-      { key: ip, backlog: () => ws.backlog },
+      { key: ip, backlog: () => ws.backlog, sendFast: (text) => !!link && link.fast(text) },
     );
     // After a stall on the player's own link, all the poses it queued arrive in one burst. Only the
     // newest matters: keep the last pose of each burst and relay that once the burst is read.
@@ -98,7 +103,17 @@ export function startDuelServer({
       lastPoseAt = Date.now();
       client.receive(text);
     };
-    ws.onmessage = (text) => {
+    const onText = (text) => {
+      if (rtc && text.length < 12500 && text.includes('"rtc.offer"')) {
+        try {
+          const m = JSON.parse(text);
+          if (m.t === "rtc.offer" && client.hello) {
+            link = link || rtc.attach(onText);
+            link.offer(m.sdp, (sdp) => ws.send(JSON.stringify({ t: "rtc.answer", sdp })));
+          }
+        } catch {}
+        return;
+      }
       if (POSE.test(text.slice(0, 24)) || POSE.test(text.slice(-24))) {
         // the hub drops poses closer than 20 ms apart, which would keep the OLDEST of a burst:
         // hold the newest and hand it over once the 20 ms spacing allows
@@ -109,8 +124,10 @@ export function startDuelServer({
       flushPose(); // keep the order: the pose that came before this message is handled first
       client.receive(text);
     };
+    ws.onmessage = onText;
     ws.onclose = () => {
       clearTimeout(poseTimer);
+      link && link.close();
       sockets.delete(ws);
       const n = (perIp.get(ip) || 1) - 1;
       n > 0 ? perIp.set(ip, n) : perIp.delete(ip);
@@ -144,6 +161,7 @@ export function startDuelServer({
       clearInterval(ticker);
       for (const ws of sockets) ws.close(1001, "server shutdown");
       await new Promise((r) => server.close(() => r()));
+      rtc && rtc.cleanup();
     },
   };
 }

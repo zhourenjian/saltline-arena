@@ -15,7 +15,7 @@
     "verify:refactor": "node scripts/verify-refactor.mjs",
     "build:standalone": "vite build",
     "build:world": "vite build --config vite.world.config.js && node scripts/build-world-package.mjs",
-    "test": "node tests/hub.test.mjs && node tests/brawl.test.mjs && node tests/modes.test.mjs && node tests/ladder.test.mjs && node tests/soldier.test.mjs && node tests/mobile.test.mjs && node tests/brawl-e2e.test.mjs",
+    "test": "node tests/hub.test.mjs && node tests/rtc.test.mjs && node tests/brawl.test.mjs && node tests/modes.test.mjs && node tests/ladder.test.mjs && node tests/soldier.test.mjs && node tests/mobile.test.mjs && node tests/brawl-e2e.test.mjs && node tests/rtc-e2e.test.mjs",
     "server": "node server/duel-server.mjs",
     "test:hub": "node tests/hub.test.mjs",
     "test:modes": "node tests/modes.test.mjs",
@@ -33,5 +33,8 @@
     "@babel/traverse": "7.29.13",
     "prettier": "3.9.10",
     "vite": "8.3.7"
+  },
+  "optionalDependencies": {
+    "node-datachannel": "0.20.0"
   }
 }

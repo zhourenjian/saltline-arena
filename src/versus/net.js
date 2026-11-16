@@ -1,6 +1,7 @@
 // 1v1 duel client: one WebSocket to the relay (server/duel-server.mjs), JSON messages {t, ...}.
 // The page only ever connects to the address the player typed (or ?server=); nothing else.
 import { DUEL_PROTOCOL, DUEL_RULES, sanitizeName } from "./rules.js";
+import { openUdp, rtcWanted } from "./rtc.js";
 
 var VERSUS_KEY = "saltline.versus.v1";
 
@@ -74,12 +75,22 @@ function connectDuel(url, hello, { timeoutMs = 6000, WebSocketImpl = globalThis.
         rules: null,
         features: [],
         rtt: null,
+        get transport() {
+          return udp && udp.open ? "udp" : "ws";
+        },
         // summary of the last ~30 s of pings (ms): total, network part, time queued behind our own main thread
         pingStats() {
           if (!samples.length) return null;
           let ms = samples.map((x) => x.ms).sort((a, b) => a - b),
             max = (k) => Math.round(Math.max(...samples.map((x) => x[k])));
+          let u = usamples.slice().sort((a, b) => a - b),
+            lost = Math.max(0, usent - u.length);
           return {
+            udp: udp && udp.open ? 1 : 0,
+            un: u.length,
+            uavg: u.length ? Math.round(u.reduce((a, b) => a + b, 0) / u.length) : 0,
+            umax: u.length ? Math.round(u[u.length - 1]) : 0,
+            uloss: usent ? Math.round((lost * 100) / usent) : 0,
             n: ms.length,
             avg: Math.round(ms.reduce((a, b) => a + b, 0) / ms.length),
             p95: Math.round(ms[Math.min(ms.length - 1, Math.floor(ms.length * 0.95))]),
@@ -101,12 +112,15 @@ function connectDuel(url, hello, { timeoutMs = 6000, WebSocketImpl = globalThis.
           if (closed || ws.readyState !== 1) return !1;
           let text = JSON.stringify({ ...data, t });
           if (text.length > DUEL_RULES.maxMessageBytes) return !1;
+          // poses (and the UDP ping) go over the data channel when there is one; losing one is fine
+          if ((t === "state" || t === "br.state") && udp && udp.send(text)) return !0;
           return (ws.send(text), !0);
         },
         close(code = 1000, reason = "bye") {
           if (closed) return;
           closed = !0;
           clearInterval(pinger);
+          udp && udp.close();
           try {
             ws.close(code, reason);
           } catch {}
@@ -128,13 +142,24 @@ function connectDuel(url, hello, { timeoutMs = 6000, WebSocketImpl = globalThis.
       timer = setTimeout(() => fail(new Error(`no answer from ${url}`)), timeoutMs),
       pinger = 0,
       samples = [], // last ping samples: { ms, net, lag }
+      usamples = [], // UDP ping round trips since the last report, ms
+      usent = 0, // UDP pings sent since the last report
+      udp = null,
+      answers = new Set(),
       lastReport = performance.now(),
       report = () => {
         lastReport = performance.now();
         let s = client.pingStats();
         s && client.send("netstat", { ...s, via: (navigator.connection && navigator.connection.effectiveType) || null });
+        usamples.length = usent = 0;
       },
-      ping = () => client.send("ping", { at: performance.now() }),
+      ping = () => {
+        client.send("ping", { at: performance.now() });
+        if (udp && udp.open) {
+          usent++;
+          udp.send(JSON.stringify({ t: "ping", at: performance.now(), u: 1 }));
+        }
+      },
       fail = (err) => {
         if (settled) return;
         ((settled = !0), clearTimeout(timer), (closed = !0));
@@ -148,12 +173,14 @@ function connectDuel(url, hello, { timeoutMs = 6000, WebSocketImpl = globalThis.
     ws.onclose = (e) => {
       if (!settled) return fail(new Error(`connection to ${url} closed (${e.code})`));
       clearInterval(pinger);
+      udp && udp.close();
       closed || ((closed = !0), fire("close", { code: e.code, reason: e.reason, local: !1 }));
     };
-    ws.onmessage = (e) => {
+    ws.onmessage = (e) => handle(e.data, e);
+    let handle = (data, e) => {
       let m;
       try {
-        m = JSON.parse(e.data);
+        m = JSON.parse(data);
       } catch {
         return;
       }
@@ -165,7 +192,20 @@ function connectDuel(url, hello, { timeoutMs = 6000, WebSocketImpl = globalThis.
         client.features = Array.isArray(m.features) ? m.features.map(String) : ["duel"];
         (ping(), (pinger = setInterval(ping, PING_SECONDS * 1000)));
         try { globalThis.__saltlineNet = client; } catch {}
+        client.features.includes("rtc") &&
+          rtcWanted() &&
+          (udp = openUdp({
+            signal: (sdp) => client.send("rtc.offer", { sdp }),
+            onAnswer: (fn) => (answers.add(fn), () => answers.delete(fn)),
+            onText: (text, ev) => handle(text, ev),
+          }));
         return resolve(client);
+      }
+      if (m.t === "rtc.answer") return void answers.forEach((fn) => fn(m.sdp));
+      if (m.t === "pong" && m.u === 1) {
+        let ms = performance.now() - +m.at;
+        Number.isFinite(ms) && ms >= 0 && ms < 60000 && (usamples.push(ms), usamples.length > 100 && usamples.shift());
+        return;
       }
       if (m.t === "pong") {
         let now = performance.now(),

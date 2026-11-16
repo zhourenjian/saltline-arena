@@ -31,6 +31,7 @@ export function createDuelHub({
   clearTimer = (t) => clearTimeout(t),
   log = () => {},
   brawlRules = BRAWL_RULES,
+  rtc = false, // advertise the WebRTC data channel in the welcome message
   // per-client message flood guard (token bucket); voice chunks and 20 Hz poses fit easily
   messagesPerSecond = 120,
   messageBurst = 240,
@@ -55,11 +56,16 @@ export function createDuelHub({
   // (socket buffer already holding this much) they are dropped instead of queued: when the link
   // recovers it gets the newest state, not a burst of old ones to replay.
   const STALE_BACKLOG = 6000;
-  const droppable = (t, data) => t === "state" || t === "br.state" || (t === "br.snap" && !(data.shots && data.shots.length));
+  const droppable = (t, data) =>
+    t === "state" || t === "br.state" || (t === "pong" && data.u === 1) || (t === "br.snap" && !(data.shots && data.shots.length));
   function emit(client, t, data = {}) {
-    if (client.backlog && droppable(t, data) && client.backlog() > STALE_BACKLOG) return void (client.dropped = (client.dropped || 0) + 1);
+    const fast = droppable(t, data);
     try {
-      client.send(JSON.stringify({ t, ...data }));
+      const text = JSON.stringify({ t, ...data });
+      // over the UDP data channel when the player has one; otherwise the WebSocket, unless that is backed up
+      if (fast && client.sendFast && client.sendFast(text)) return;
+      if (fast && client.backlog && client.backlog() > STALE_BACKLOG) return void (client.dropped = (client.dropped || 0) + 1);
+      client.send(text);
     } catch (e) {
       log("send failed", e);
     }
@@ -225,7 +231,7 @@ export function createDuelHub({
       emit(c, "welcome", {
         id: c.id,
         v: DUEL_PROTOCOL,
-        features: ["duel", "brawl"],
+        features: rtc ? ["duel", "brawl", "rtc"] : ["duel", "brawl"],
         rules: {
           killsToWin: DUEL_RULES.killsToWin,
           respawnSeconds: DUEL_RULES.respawnSeconds,
@@ -336,13 +342,13 @@ export function createDuelHub({
         startMatch(room);
     },
     ping(c, m) {
-      emit(c, "pong", { at: m.at });
+      emit(c, "pong", m.u === 1 ? { at: m.at, u: 1 } : { at: m.at });
     },
     // a client's own summary of its last ~30 s of ping samples (see src/versus/net.js); only logged
     netstat(c, m) {
       const n = (v, max = 60000) => (Number.isFinite(+v) ? Math.max(0, Math.min(max, Math.round(+v))) : 0);
       log(
-        `net ${c.name || c.id}: n=${n(m.n, 100)} avg=${n(m.avg)} p95=${n(m.p95)} max=${n(m.max)} net-max=${n(m.netMax)} queue-max=${n(m.lagMax)} over200=${n(m.over200, 100)} via=${String(m.via || "-").slice(0, 12)}`,
+        `net ${c.name || c.id}: udp=${n(m.udp, 1)} un=${n(m.un, 100)} uavg=${n(m.uavg)} umax=${n(m.umax)} uloss=${n(m.uloss, 100)} n=${n(m.n, 100)} avg=${n(m.avg)} p95=${n(m.p95)} max=${n(m.max)} net-max=${n(m.netMax)} queue-max=${n(m.lagMax)} over200=${n(m.over200, 100)} via=${String(m.via || "-").slice(0, 12)}`,
       );
     },
   };
@@ -354,7 +360,7 @@ export function createDuelHub({
     tick: () => brawl.tick(),
     // key: who this connection is for mutes that must survive a reconnect (the server passes the
     // remote address); defaults to the connection id
-    connect(send, close = () => {}, { key = null, backlog = null } = {}) {
+    connect(send, close = () => {}, { key = null, backlog = null, sendFast = null } = {}) {
       const id = "p" + nextId++;
       let tokens = messageBurst,
         tokensAt = now();
@@ -368,6 +374,7 @@ export function createDuelHub({
         send,
         close,
         backlog,
+        sendFast,
         dropped: 0,
         lastPos: null,
         receive(text) {

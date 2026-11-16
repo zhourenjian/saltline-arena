@@ -107,7 +107,9 @@ function installViewport(context) {
     let netLine = () => {
       let c = window.__saltlineNet,
         st = c && c.pingStats && c.pingStats();
-      return st ? `ping avg${st.avg} p95${st.p95} max${st.max} net${st.netMax} queue${st.lagMax} >200:${st.over200}` : "ping -";
+      return st
+        ? `net ${c.transport}  ws avg${st.avg} p95${st.p95} max${st.max} net${st.netMax} queue${st.lagMax} >200:${st.over200}  udp n${st.un} avg${st.uavg} max${st.umax} lost${st.uloss}%`
+        : "ping -";
     };
     let show = () => {
       let vv = window.visualViewport,
