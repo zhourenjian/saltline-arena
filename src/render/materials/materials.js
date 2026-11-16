@@ -67,7 +67,7 @@ async function createMaterials(context) {
     n = +(t.tex || 0) || (context.quality && context.quality.tex) || 1024,
     s = Math.min(n, 1024),
     o = Math.min(
-      8,
+      16,
       e.capabilities.getMaxAnisotropy ? e.capabilities.getMaxAnisotropy() : 1,
     ),
     r = {

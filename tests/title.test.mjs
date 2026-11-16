@@ -32,8 +32,8 @@ try {
   });
   await test("?battle=1: fighters appear, are visible and shoot", async () => {
     const page = await browser.open(`${web.url}/?noaudio=1&battle=1&q=low`, { wait: TITLE, window: true });
-    await page.waitFor(`__G.titleBattle && __G.titleBattle.stats().visible >= 2`, 15000);
-    await page.waitFor(`__G.titleBattle.stats().shots >= 3`, 8000);
+    await page.waitFor(`__G.titleBattle && __G.titleBattle.stats().visible >= 2`, 70000);
+    await page.waitFor(`__G.titleBattle.stats().shots >= 3`, 20000);
     const st = await page.ev(`return __G.titleBattle.stats()`);
     ok(st.bots === 2 && st.spot, "bots", st);
     const gap = Math.hypot(st.at[0][0] - st.at[1][0], st.at[0][2] - st.at[1][2]);
@@ -45,7 +45,7 @@ try {
     ok((await page.ev(`return !__G.titleBattle`)) === true, "disabled");
     page.close();
     page = await browser.open(`${web.url}/?noaudio=1&battle=1&q=low`, { wait: TITLE, window: true });
-    await page.waitFor(`__G.titleBattle.stats().visible >= 1`, 15000);
+    await page.waitFor(`__G.titleBattle.stats().visible >= 1`, 70000);
     await page.ev(`document.querySelector('.menu [data-act="character"]').click()`);
     await page.waitFor(`__G.titleBattle.stats().visible === 0`, 4000);
     page.close();

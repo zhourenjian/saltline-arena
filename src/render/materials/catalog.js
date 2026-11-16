@@ -565,15 +565,19 @@ var gA = `
     diffuseColor.rgb *= 1.0 - uSlWetP.x * slWetK; }
 #endif
 #ifdef SL_ACUT
-  // alpha-tested wire mesh that survives distance: wires stay ~1 px wide through the mips (lowered threshold),
-  // then dissolve into a stable ~1/3-coverage dither veil once the diamonds themselves are sub-pixel.
+  // alpha-tested wire mesh. Close up the wires are a plain alpha test. As the diamonds shrink towards one
+  // pixel a plain test of a regular lattice against the regular pixel grid makes moire (wavy bands that crawl
+  // when you move), so from lod 1 on the test turns into "alpha hashing": the mip-averaged alpha, which is the
+  // fraction of the pixel the wires cover, is compared with a per-pixel noise value. On average the right
+  // share of fragments survives, with no regular pattern left to beat against the pixel grid.
   { vec2 slFw = fwidth(slUv) * 512.0; float slLod = log2(max(max(slFw.x, slFw.y), 1e-4));
     float slThC = 0.5 * exp2(-clamp(slLod - 1.0, 0.0, 4.0));
     float slIgn = fract(52.9829189 * fract(dot(gl_FragCoord.xy, vec2(0.06711056, 0.00583715))));
-    float slTh = mix(slThC, 0.05 + slIgn * 0.80, smoothstep(3.5, 5.5, slLod));
-    diffuseColor.a = sampledDiffuseColor.a > slTh ? 1.0 : 0.0;
-    // sub-pixel wires: the surviving fragments stand in for a much thinner wire, so dim them (no white sheets in the sun)
-    diffuseColor.rgb *= mix(1.0, 0.45, smoothstep(1.5, 4.5, slLod)); }
+    float slTh = mix(slThC, 0.02 + slIgn * 0.96, smoothstep(0.8, 2.2, slLod));
+    // far away real wire would be a thin dark haze; keep it a little denser so a fence still reads as a fence
+    float slCov = sampledDiffuseColor.a * mix(1.0, 3.2, smoothstep(1.0, 3.5, slLod));
+    diffuseColor.a = slCov > slTh ? 1.0 : 0.0;
+    diffuseColor.rgb *= mix(1.0, 0.7, smoothstep(2.0, 4.5, slLod)); }
 #endif
 `;
 
