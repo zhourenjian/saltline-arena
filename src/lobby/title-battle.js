@@ -277,7 +277,7 @@ function createTitleBattle(context, avatars, random = Math.random) {
       p: [bot.p.x, bot.p.y, bot.p.z],
       v: [bot.v.x, 0, bot.v.z],
       yaw: bot.yaw,
-      pitch: 0,
+      pitch: api.pitch || 0,
       crouch: !1,
       loco: { phase: "grounded", speed: moving, mode: "duoworld:walk", ad: bot.target && (bot.burst > 0 || bot.nextShot < 0.7) ? 1 : 0 },
     });
@@ -329,7 +329,9 @@ function createTitleBattle(context, avatars, random = Math.random) {
   }
 
   context.frameHooks.push(frame);
-  return {
+  let api = {
+    pitch: 0, // (tests set it to look at the aim pose at different pitches)
+    bots: () => bots,
     stats: () => ({ bots: bots.length, visible: bots.filter((x) => x.opp.visible).length, alive: bots.filter((x) => x.hp > 0).length, shots, kills, spot: !!spot, at: bots.map((x) => [x.p.x, x.p.y, x.p.z]) }),
     dispose() {
       if (disposed) return;
@@ -340,6 +342,7 @@ function createTitleBattle(context, avatars, random = Math.random) {
       bots = [];
     },
   };
+  return api;
 }
 
 export { createTitleBattle, BATTLE };

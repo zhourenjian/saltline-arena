@@ -12,6 +12,8 @@
 //                        along the fingers. grip is for the right hand, support for the left
 //                        (null = let go). action: null | "reload" | "inspect" (a hint, e.g. to look
 //                        down at the gun). No "held" = empty hands.
+//                        ads 0..1 + sight [x,y,z]: aiming down the sights; sight is the point (anchor space)
+//                        the avatar puts at its right eye, so eye, optic and barrel line up.
 import { Euler, Group, Matrix4, Mesh, MeshStandardMaterial, Object3D, Quaternion, Vector3 } from "../vendor/three-r180.js";
 import { mi, w_ } from "./geometry.js";
 
@@ -86,7 +88,7 @@ const MAG_OUT = 0.47,
  * @param {boolean} empty  reload from an empty magazine (adds the charging-handle pull)
  * @param {object} [out]   reused result
  */
-function heldGunPose(action, t, empty, out, ads = 0) {
+function heldGunPose(action, t, empty, out) {
   out = out || createPose();
   let rig = out.rigQuaternion,
     rp = out.rigPosition;
@@ -124,11 +126,6 @@ function heldGunPose(action, t, empty, out, ads = 0) {
       c = sstep(0, 0.5, t) * (1 - sstep(2.9, 3.4, t));
     rig.setFromEuler(E.set(-0.34 * c, 0.3 * b - 0.1 * a, 0.62 * a - 0.5 * b, "YXZ"));
     rp.set(0.03 * c, 0.02 * c, -0.03 * c);
-  }
-  // aiming down the sights: the gun comes up and back to the shoulder, hands go with it
-  if (ads > 0 && !action) {
-    rig.setFromEuler(E.set(-0.05 * ads, 0, 0, "YXZ"));
-    rp.set(0, 0.11 * ads, -0.09 * ads);
   }
   // right hand: always on the grip, which moves with the gun
   out.grip.position.copy(GRIP.p).applyQuaternion(rig).add(rp);
@@ -226,7 +223,7 @@ function createHeldGun(kit) {
   rig.add(model);
   root.add(rig);
   let pose = createPose(),
-    held = { kind: "rifle", grip: frameData(), support: frameData(), action: null },
+    held = { kind: "rifle", grip: frameData(), support: frameData(), action: null, ads: 0, sight: toHeld([0, mi.sightY, 0.135]) },
     publish = (dst, src) => {
       src.position.toArray(dst.position);
       src.quaternion.toArray(dst.quaternion);
@@ -237,7 +234,10 @@ function createHeldGun(kit) {
       held,
       pose,
       setAction(action, t, empty, ads) {
-        heldGunPose(action || ACTION_NONE, t || 0, !!empty, pose, +ads || 0);
+        heldGunPose(action || ACTION_NONE, t || 0, !!empty, pose);
+        // aiming: the avatar brings `sight` (where the eye goes: on the sight line, behind the optic) to its
+        // right eye, so eye, optic and barrel stay on one line at any pitch (never while a reload runs)
+        held.ads = action ? 0 : Math.max(0, Math.min(1, +ads || 0));
         rig.position.copy(pose.rigPosition);
         rig.quaternion.copy(pose.rigQuaternion);
         mag.position.fromArray(mi.magPos).add(pose.magOffset);

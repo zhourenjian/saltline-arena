@@ -845,7 +845,7 @@ function createSoldierInstance(THREE, CFG) {
 
   // ---- state ------------------------------------------------------------------------------------------
   let st = { grounded: true, speed: 0, velocity: { x: 0, y: 0, z: 0 }, phase: 'grounded', mode: 'duoworld:walk', stance: 'standing', sprinting: false, aimPitch: 0 };
-  let time = Math.random() * 10, phase = 0, wArm = 0, wCrouch = 0, wAir = 0, wMantle = 0, wLadder = 0, wSprint = 0, wAct = 0, mv = 0, gdx = 0, gdz = 1, pitch = 0;
+  let time = Math.random() * 10, phase = 0, wArm = 0, wCrouch = 0, wAir = 0, wMantle = 0, wLadder = 0, wSprint = 0, wAct = 0, wAds = 0, mv = 0, gdx = 0, gdz = 1, pitch = 0;
   let recoil = 0, land = 0, lastPhase = 'grounded', climbed = 0, ledgeH = 1, ledgeZ = 0.5, spd = 0, vy = 0, disposed = false;
   const hand = {
     L: { pos: new V(), pole: new V(), q: new Q(), wq: 0, pose: new Array(16).fill(0), grip: wrapPose(0.015, false) },
@@ -911,6 +911,7 @@ function createSoldierInstance(THREE, CFG) {
     wLadder = damp(wLadder, ladder ? 1 : 0, 11, dt);
     wSprint = damp(wSprint, st.sprinting && sXZ > 4.6 && !air ? 1 : 0, 8, dt);
     wAct = damp(wAct, held && held.action ? 1 : 0, 6, dt);
+    wAds = damp(wAds, held && held.sight && !held.action ? clamp(+held.ads || 0, 0, 1) * (1 - wSprint) : 0, 14, dt);
     mv = damp(mv, sstep(0.2, 1.4, sXZ), 10, dt);
     pitch = damp(pitch, clamp(+st.aimPitch || 0, -1.45, 1.45), 20, dt);
     if (sXZ > 0.2) { gdx = damp(gdx, w.vL.x / sXZ, 12, dt); gdz = damp(gdz, w.vL.z / sXZ, 12, dt); const l = Math.hypot(gdx, gdz) || 1; gdx /= l; gdz /= l; }
@@ -952,6 +953,17 @@ function createSoldierInstance(THREE, CFG) {
     weapon.position.y += 0.0025 * Math.sin(time * 1.7) + mv * 0.006 * Math.cos(ph * 2 + 0.6);
     weapon.position.addScaledVector(w.v.set(0, 0.004, -0.024).applyQuaternion(weapon.quaternion), recoil);
     weapon.quaternion.multiply(w.q.setFromAxisAngle(AX, -0.035 * recoil));
+    // aiming down the sights: the gun comes to the face, the sight point of the gun sits on the right eye, so
+    // eye, optic and barrel are one line whatever the pitch, and the right hand ends up in front of the chest centre
+    if (wAds > 0.001) {
+      w.v.copy(B.neck.position).applyQuaternion(rq.chest).add(rp.chest);
+      w.v2.copy(B.head.position).applyQuaternion(rq.neck).add(w.v);
+      w.qb.multiplyQuaternions(rq.neck, B.head.quaternion);
+      w.v.set(-0.034, 0.105, 0.088).applyQuaternion(w.qb).add(w.v2); // right eye, root space
+      const sp = held.sight;
+      w.v2.set(arr(sp, 0), arr(sp, 1), arr(sp, 2)).applyQuaternion(weapon.quaternion);
+      weapon.position.lerp(w.v.sub(w.v2), wAds);
+    }
 
     // ---- arms
     for (const [side, s] of SIDES) {
