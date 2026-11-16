@@ -279,7 +279,7 @@ function createTitleBattle(context, avatars, random = Math.random) {
       yaw: bot.yaw,
       pitch: 0,
       crouch: !1,
-      loco: { phase: "grounded", speed: moving, mode: "duoworld:walk" },
+      loco: { phase: "grounded", speed: moving, mode: "duoworld:walk", ad: bot.target && (bot.burst > 0 || bot.nextShot < 0.7) ? 1 : 0 },
     });
   }
 

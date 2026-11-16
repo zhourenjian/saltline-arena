@@ -86,7 +86,7 @@ const MAG_OUT = 0.47,
  * @param {boolean} empty  reload from an empty magazine (adds the charging-handle pull)
  * @param {object} [out]   reused result
  */
-function heldGunPose(action, t, empty, out) {
+function heldGunPose(action, t, empty, out, ads = 0) {
   out = out || createPose();
   let rig = out.rigQuaternion,
     rp = out.rigPosition;
@@ -124,6 +124,11 @@ function heldGunPose(action, t, empty, out) {
       c = sstep(0, 0.5, t) * (1 - sstep(2.9, 3.4, t));
     rig.setFromEuler(E.set(-0.34 * c, 0.3 * b - 0.1 * a, 0.62 * a - 0.5 * b, "YXZ"));
     rp.set(0.03 * c, 0.02 * c, -0.03 * c);
+  }
+  // aiming down the sights: the gun comes up and back to the shoulder, hands go with it
+  if (ads > 0 && !action) {
+    rig.setFromEuler(E.set(-0.05 * ads, 0, 0, "YXZ"));
+    rp.set(0, 0.11 * ads, -0.09 * ads);
   }
   // right hand: always on the grip, which moves with the gun
   out.grip.position.copy(GRIP.p).applyQuaternion(rig).add(rp);
@@ -231,8 +236,8 @@ function createHeldGun(kit) {
       object3D: root,
       held,
       pose,
-      setAction(action, t, empty) {
-        heldGunPose(action || ACTION_NONE, t || 0, !!empty, pose);
+      setAction(action, t, empty, ads) {
+        heldGunPose(action || ACTION_NONE, t || 0, !!empty, pose, +ads || 0);
         rig.position.copy(pose.rigPosition);
         rig.quaternion.copy(pose.rigQuaternion);
         mag.position.fromArray(mi.magPos).add(pose.magOffset);
@@ -296,7 +301,7 @@ function attachHeldGun(context, instance) {
         inHands = !0;
         root.parent !== anchor && anchor.add(root);
         root.visible = !0;
-        gun.setAction(act ? act.a : ACTION_NONE, act ? act.t : 0, !!(act && act.empty));
+        gun.setAction(act ? act.a : ACTION_NONE, act ? act.t : 0, !!(act && act.empty), act ? act.ads : 0);
         state.held = gun.held;
       }
       return state;

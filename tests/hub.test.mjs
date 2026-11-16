@@ -332,6 +332,11 @@ await test("locomotion relay: sanitizeLoco bounds climb state and drops unknown 
   assert.deepEqual(sanitizeLoco({ w: [2, -3, 0] }).w, [2, 0, 0]);
   for (const bad of [[0, 1, 0], [3, 1, 0], ["1", 1, 0], "reload", { 0: 1 }, [1, NaN, 0].slice(0, 0)]) assert.equal(sanitizeLoco({ w: bad }).w, undefined);
   assert.deepEqual(sanitizeLoco({ w: [1, NaN, 0] }).w, [1, 0, 0]);
+  // aiming down the sights travels as loco.ad
+  assert.equal(sanitizeLoco({ ad: 1 }).ad, 1);
+  assert.equal(sanitizeLoco({ ad: 0 }).ad, undefined);
+  assert.equal(packLoco({ grounded: true, phase: "grounded", mode: "m", speed: 0 }, { a: 0, t: 0, ads: 0.9 }).ad, 1);
+  assert.equal(packLoco({ grounded: true, phase: "grounded", mode: "m", speed: 0 }, { a: 0, t: 0, ads: 0.2 }).ad, undefined);
   const base = { grounded: true, phase: "grounded", mode: "duoworld:walk", speed: 0 };
   assert.deepEqual(packLoco(base, { a: 1, t: 0.98765, empty: true }).w, [1, 0.99, 1]);
   assert.equal(packLoco(base, { a: 0, t: 0, empty: false }).w, undefined);

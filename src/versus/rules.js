@@ -134,6 +134,8 @@ function sanitizeLoco(l) {
   }
   // what the hands are doing with the gun: [action 0 none | 1 reload | 2 inspect, seconds into it, empty magazine 0|1]
   if (Array.isArray(l.w) && (l.w[0] === 1 || l.w[0] === 2)) out.w = [l.w[0], num(l.w[1], 0, 4), l.w[2] ? 1 : 0];
+  // aiming down the sights: the gun comes up to the shoulder
+  l.ad && (out.ad = 1);
   return out;
 }
 
@@ -151,6 +153,7 @@ function packLoco(l, act) {
       crouchEnd: !!l.climb.crouchEnd,
     });
   act && (act.a === 1 || act.a === 2) && (out.w = [act.a, r(act.t), act.empty ? 1 : 0]);
+  act && act.ads > 0.5 && (out.ad = 1);
   return out;
 }
 

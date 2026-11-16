@@ -118,6 +118,15 @@ try {
     await B.waitFor(`__G.brawl.remotes.size === 1`, 5000);
   });
 
+  await test("aiming down the sights is seen by the other player (not just reload / crouch)", async () => {
+    const ads = (page) => page.ev(`const r = [...__G.brawl.remotes.values()][0]; return r ? r.opp.heldAction.ads : -1`);
+    assert((await ads(B)) < 0.05, "not aiming at first", await ads(B));
+    await A.ev(`Object.defineProperty(__G.input, "ads", { get: () => true, set() {}, configurable: true })`);
+    await B.waitFor(`[...__G.brawl.remotes.values()][0].opp.heldAction.ads > 0.95`, 5000);
+    await A.ev(`Object.defineProperty(__G.input, "ads", { value: false, writable: true, configurable: true })`);
+    await B.waitFor(`[...__G.brawl.remotes.values()][0].opp.heldAction.ads < 0.05`, 5000);
+  });
+
   await test("arena full: the next player goes straight into the queue and watches", async () => {
     C = await open();
     await enter(C, "Charlie");

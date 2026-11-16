@@ -457,6 +457,7 @@ async function createWeapon(context) {
       // What the hands are doing with the gun, for the third-person body and for other players:
       // a = 0 none | 1 reload | 2 inspect, t = seconds into it, empty = reload from an empty magazine.
       heldAction(out = {}) {
+        out.ads = k.adsE;
         k.reload
           ? ((out.a = 1), (out.t = k.reload.t), (out.empty = !!k.reload.empty))
           : k.inspect >= 0

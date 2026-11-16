@@ -92,7 +92,7 @@ function createOpponent(context, avatars, { onHit, minDelay } = {}) {
     deadFor = 0,
     shieldLeft = 0,
     lastPhase = "grounded",
-    act = { a: 0, t: 0, empty: !1 }, // what their hands are doing with the gun (reload / inspect)
+    act = { a: 0, t: 0, empty: !1, ads: 0 }, // what their hands are doing with the gun (reload / inspect)
     disposed = !1;
   ((root.name = "saltline:opponent"),
     (scaleNode.rotation.y = AVATAR_COORDINATES.forward === "+Z" ? Math.PI : 0),
@@ -187,6 +187,7 @@ function createOpponent(context, avatars, { onHit, minDelay } = {}) {
     let w = alive && Array.isArray(l.w) ? l.w : null,
       a = w ? w[0] : 0;
     a !== act.a || (w && Math.abs(w[1] - act.t) > 0.6) ? ((act.a = a), (act.t = w ? +w[1] || 0 : 0), (act.empty = !!(w && w[2]))) : a && (act.t += dt);
+    act.ads += ((alive && l.ad && !act.a ? 1 : 0) - act.ads) * Math.min(1, dt * 12);
     return {
       grounded: phase !== "airborne" && phase !== "takeoff",
       speed: alive ? (Number.isFinite(l.speed) ? l.speed : speed) : 0,
