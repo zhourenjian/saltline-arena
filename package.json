@@ -15,14 +15,14 @@
     "verify:refactor": "node scripts/verify-refactor.mjs",
     "build:standalone": "vite build",
     "build:world": "vite build --config vite.world.config.js && node scripts/build-world-package.mjs",
-    "test": "node tests/hub.test.mjs && node tests/rtc.test.mjs && node tests/brawl.test.mjs && node tests/modes.test.mjs && node tests/ladder.test.mjs && node tests/soldier.test.mjs && node tests/mobile.test.mjs && node tests/brawl-e2e.test.mjs && node tests/rtc-e2e.test.mjs",
+    "test": "node tests/hub.test.mjs && node tests/rtc.test.mjs && node tests/brawl.test.mjs && node tests/modes.test.mjs && node tests/ladder.test.mjs && node tests/soldier.test.mjs && node tests/title.test.mjs && node tests/mobile.test.mjs && node tests/brawl-e2e.test.mjs && node tests/rtc-e2e.test.mjs",
     "server": "node server/duel-server.mjs",
     "test:hub": "node tests/hub.test.mjs",
     "test:modes": "node tests/modes.test.mjs",
     "test:duoworld": "node duoworld/tests/duoworld.test.mjs",
     "test:ladder": "node tests/ladder.test.mjs",
     "test:soldier": "node tests/soldier.test.mjs",
-    "test:mobile": "node tests/mobile.test.mjs",
+    "test:mobile": "node tests/title.test.mjs && node tests/mobile.test.mjs",
     "test:brawl": "node tests/brawl.test.mjs && node tests/brawl-e2e.test.mjs"
   },
   "engines": {

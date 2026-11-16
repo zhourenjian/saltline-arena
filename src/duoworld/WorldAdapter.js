@@ -9,6 +9,7 @@
 //
 // The scene code is shared by both modes: standalone (RuntimeBridge drives update) and World
 // Package (a DuoWorld host drives update).
+import { createTitleBattle } from "../lobby/title-battle.js";
 import "./compatibility/avatar-registry.js";
 import "../world/props/register.js";
 import { createLifetime } from "../core/lifetime.js";
@@ -54,6 +55,7 @@ function createSaltlineWorld(options = {}) {
     characters = null,
     versus = null,
     brawl = null,
+    titleBattle = null,
     netStats = null,
     mounted = null, // DOM this world created or changed, restored on dispose
     queuedAvatar = void 0,
@@ -162,6 +164,8 @@ function createSaltlineWorld(options = {}) {
           (versus = createVersus(context, avatars)),
           // the brawl is created after the AvatarHost so its spectator camera hook runs last
           (brawl = createBrawl(context, avatars)),
+          // the title screen's background fight (see src/lobby/title-battle.js)
+          (titleBattle = context.titleBattle = createTitleBattle(context, avatars)),
           (netStats = context.netStats = createNetStats(context)))
         : null,
       // T toggles the over-the-shoulder view, only while an Avatar Package is worn
@@ -277,7 +281,8 @@ function createSaltlineWorld(options = {}) {
       }
       if (state === "created") return;
       (cycle++, state === "entered" && (await world.leave()));
-      (netStats && netStats.dispose(),
+      (titleBattle && (titleBattle.dispose(), (titleBattle = null)),
+        netStats && netStats.dispose(),
         context && context.netStats === netStats && (context.netStats = null),
         brawl && brawl.dispose(),
         versus && versus.dispose(),

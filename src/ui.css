@@ -107,6 +107,13 @@ body {
   color: var(--bone);
   line-height: 1;
 }
+.boot-mark small {
+  display: block;
+  font-size: 0.38em;
+  letter-spacing: 0.9em;
+  margin: 0.35em -0.9em 0 0;
+  color: var(--steel);
+}
 .boot-sub {
   font-family: var(--f-mono);
   font-size: 12px;
@@ -1164,6 +1171,29 @@ body {
   color: var(--bone);
   white-space: nowrap;
   text-shadow: 0 2px 30px rgba(0, 0, 0, 0.35);
+}
+.m-word span {
+  display: block;
+}
+.m-word .m-word-sub {
+  font-size: 0.34em;
+  letter-spacing: 0.86em;
+  margin: 0.5em -0.86em 0 0.05em;
+  color: var(--steel);
+  line-height: 1;
+}
+.m-gh {
+  margin-top: 8px;
+  font: 400 11px/1.5 var(--f-mono);
+  letter-spacing: 0.04em;
+}
+.m-gh a {
+  color: var(--bone-dim);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.m-gh a:hover {
+  color: var(--bone);
 }
 .m-premise {
   position: relative;

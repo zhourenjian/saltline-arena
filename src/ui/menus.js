@@ -80,11 +80,11 @@ function createMenus(context, e) {
     <div class="m-veil"></div>
     <div class="m-bars"><i></i><i></i></div>
 
-    <section class="m-screen m-title" data-s="title" aria-label="Saltline">
+    <section class="m-screen m-title" data-s="title" aria-label="Saltline Arena">
       <div class="m-title-main">
-        <div class="m-eyebrow"><span class="m-tag">B4</span><span>Port Authority Breach Unit</span><span class="m-dim">Saltline Terminal \xB7 05:42</span></div>
-        <h1 class="m-word">SALTLINE</h1>
-        <p class="m-premise">The port\u2019s security net has gone feral. Cut its three uplinks. Reach the boat.</p>
+        <div class="m-eyebrow"><span class="m-tag">B4</span><span>Live multiplayer shooter</span><span class="m-dim">Up to 6 players \xB7 free \xB7 no sign-up</span></div>
+        <h1 class="m-word" aria-label="Saltline Arena"><span>SALTLINE</span><span class="m-word-sub">ARENA</span></h1>
+        <p class="m-premise">Drop into a live brawl with players worldwide. Last place is cut every minute. Be the one still standing.</p>
         <div class="m-actions m-main" role="group" aria-label="Main menu">
           <button class="btn primary" data-act="brawl">Play</button>
           <button class="btn" data-act="character">Character</button>
@@ -99,6 +99,7 @@ function createMenus(context, e) {
         <p class="m-wearing">Character <b data-f="char-name">Operator</b></p>
         <p class="m-install" hidden><a href="#" data-install>Play full screen: add to Home Screen \u203A</a></p>
         <p class="m-note">Every surface, machine and sound is generated in your browser. Nothing is downloaded.</p>
+        <p class="m-gh"><a href="https://github.com/zhourenjian/saltline-arena" target="_blank" rel="noopener noreferrer" data-gh>Open source on GitHub \u203A</a></p>
       </div>
       <aside class="m-legend" aria-label="Controls at a glance">
         <div><span><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> Move</span><span><kbd>Mouse</kbd> Look</span><span><kbd>LMB</kbd> Fire</span><span><kbd>RMB</kbd> Aim</span><span><kbd>R</kbd> Reload</span></div>
