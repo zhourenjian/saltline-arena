@@ -956,10 +956,9 @@ function createSoldierInstance(THREE, CFG) {
     // aiming down the sights: the gun comes to the face, the sight point of the gun sits on the right eye, so
     // eye, optic and barrel are one line whatever the pitch, and the right hand ends up in front of the chest centre
     if (wAds > 0.001) {
-      w.v.copy(B.neck.position).applyQuaternion(rq.chest).add(rp.chest);
-      w.v2.copy(B.head.position).applyQuaternion(rq.neck).add(w.v);
-      w.qb.multiplyQuaternions(rq.neck, B.head.quaternion);
-      w.v.set(-0.034, 0.105, 0.088).applyQuaternion(w.qb).add(w.v2); // right eye, root space
+      // the eye is the player's camera (1.68 m standing, 1.05 m crouched), a little to the right and ahead along the
+      // aim: the gun's line is then the line the player shoots along, so whoever is aimed at looks into the barrel
+      w.v.set(-0.034, lerp(1.68, 1.05, wCrouch), 0).add(w.v2.set(0, 0, 0.09).applyQuaternion(w.qa));
       const sp = held.sight;
       w.v2.set(arr(sp, 0), arr(sp, 1), arr(sp, 2)).applyQuaternion(weapon.quaternion);
       weapon.position.lerp(w.v.sub(w.v2), wAds);

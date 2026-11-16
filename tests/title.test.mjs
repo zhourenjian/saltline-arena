@@ -40,6 +40,28 @@ try {
     ok(gap > 4, "fighters stay apart", st);
     page.close();
   });
+  await test("aiming: the barrel line goes through the shooter's camera at any pitch (the aimed-at player looks into the muzzle)", async () => {
+    const page = await browser.open(`${web.url}/?noaudio=1&battle=1&q=low`, { wait: TITLE, window: true });
+    await page.waitFor(`__G.titleBattle && __G.titleBattle.stats().visible >= 1`, 70000);
+    await page.ev(`const T = __G.titleBattle;
+      __G.frameHooks.push(() => T.bots().forEach((x) => { x.nextShot = 99; x.burst = 0; x.hp = 100; }));
+      const cp = __G.camera.position.clone(), cq = __G.camera.quaternion.clone();
+      __G.frameHooks.push(() => { __G.camera.position.copy(cp); __G.camera.quaternion.copy(cq); __G.camera.updateMatrixWorld(true); });
+      const b = T.bots()[0]; b.goal.copy(b.p); b.hold = 999; b.v.set(0, 0, 0); window.__ad = 1;
+      if (!b.__p) { b.__p = 1; const push = b.opp.push; b.opp.push = (m) => { m.loco.ad = window.__ad; m.v = [0, 0, 0]; return push(m); }; }`);
+    for (const pitch of [-0.7, 0, 0.6]) {
+      await page.ev(`__G.titleBattle.pitch = ${pitch}`);
+      await sleep(1200);
+      await page.waitFor(`(() => { const V = __G.camera.position.constructor; return __G.titleBattle.bots()[0].opp.muzzle(new V(), new V()); })()`, 70000);
+      const d = await page.ev(`const T = __G.titleBattle, b = T.bots()[0], V = __G.camera.position.constructor, p = new V(), dir = new V();
+        if (!b.opp.muzzle(p, dir)) return { err: "no muzzle" };
+        const cam = new V(b.p.x, b.p.y + 1.68, b.p.z), w = cam.clone().sub(p), t = w.dot(dir), off = w.clone().addScaledVector(dir, -t).length();
+        return { off, t, pitchDir: Math.asin(dir.y) };`);
+      if (d.err) { await page.waitFor(`__G.titleBattle.bots()[0].opp.visible`, 70000); }
+      ok(!d.err && d.off < 0.09, `pitch ${pitch}: muzzle line misses the camera by ${d.off}`, d);
+    }
+    page.close();
+  });
   await test("?battle=0 has no fight; leaving the title hides the fighters", async () => {
     let page = await browser.open(`${web.url}/?noaudio=1&battle=0&q=low`, { wait: TITLE, window: true });
     ok((await page.ev(`return !__G.titleBattle`)) === true, "disabled");

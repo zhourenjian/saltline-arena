@@ -330,7 +330,7 @@ function createAvatarHost(context, options = {}) {
   function ensureScript(id) {
     if (registry && registry.has && registry.has(id)) return Promise.resolve();
     if (injected.has(id)) return injected.get(id);
-    let src = `${avatarRoot}${encodeURIComponent(id)}/avatar.js?v=ads2`, // ?v: bump when an avatar.js changes (it is cached for a week)
+    let src = `${avatarRoot}${encodeURIComponent(id)}/avatar.js?v=ads3`, // ?v: bump when an avatar.js changes (it is cached for a week)
       promise = withTimeout(
         new Promise((resolve, reject) => {
           let el = document.createElement("script");

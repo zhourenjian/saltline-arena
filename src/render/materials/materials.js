@@ -302,7 +302,8 @@ async function createMaterials(context) {
       }),
       G && (T.defines.SL_TRIPLANAR = ""),
       j && (T.defines.SL_FX = ""),
-      D.alphaCut && !G && (T.defines.SL_ACUT = ""));
+      D.alphaCut && !G && (T.defines.SL_ACUT = ""),
+      D.ribs && !G && (T.defines.SL_RIBS = (+D.ribs).toFixed(1)));
     let N = {
       uSlWet: r.wet,
       uSlWetP: {

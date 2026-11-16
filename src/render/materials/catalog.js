@@ -288,6 +288,7 @@ var l1 = {
     wet: aa,
   }),
   corrugated_roof: Nt("corrugated", {
+    ribs: 10,
     wet: aa,
   }),
   chainlink: Nt("chainlink", {
@@ -480,6 +481,7 @@ varying vec3 vSlONrm; varying vec3 vSlAx; varying vec3 vSlAy;
 vec3 slTw; vec2 slUx; vec2 slUy; vec2 slUz;
 vec4 slTri(sampler2D t){ return texture2D(t, slUx) * slTw.x + texture2D(t, slUy) * slTw.y + texture2D(t, slUz) * slTw.z; }
 #endif
+float slRibK = 1.0; float slBias = 0.0;
 vec4 slORM; vec2 slUv; float slWetK = 0.0; float slUp = 0.0; float slMac = 0.5; float slMac2 = 0.5; float slBead = 0.0;
 float slH(vec3 p){ p = fract(p * 0.3183099 + vec3(0.71, 0.113, 0.419)); p *= 17.0; return fract(p.x * p.y * p.z * (p.x + p.y + p.z)); }
 float slN3(vec3 x){
@@ -497,8 +499,14 @@ var gA = `
   slORM = slTri(roughnessMap);
 #else
   slUv = vMapUv * uSlUv.xy;
-  vec4 sampledDiffuseColor = texture2D(map, slUv);
-  slORM = texture2D(roughnessMap, slUv);
+  #ifdef SL_RIBS
+    // regular ribs (corrugated sheet): once the ribs get down to a few pixels apart they beat against the pixel grid
+    // and make moire bands that crawl as you move. Fade the rib relief out and blur the texture before that point,
+    // and make the surface a little rougher in return (the ribs' average shading is what is left).
+    { float slRp = fwidth(slUv.x) * SL_RIBS; slRibK = 1.0 - smoothstep(0.08, 0.26, slRp); slBias = (1.0 - slRibK) * 2.0; }
+  #endif
+  vec4 sampledDiffuseColor = texture2D(map, slUv, slBias);
+  slORM = texture2D(roughnessMap, slUv, slBias);
 #endif
 #ifdef SL_FX
   {
@@ -592,6 +600,7 @@ float roughnessFactor = roughness * slORM.g;
   { float slNl = length(texture2D(normalMap, slUv).xyz * 2.0 - 1.0);
     roughnessFactor = sqrt(roughnessFactor * roughnessFactor + clamp(1.0 - slNl, 0.0, 1.0) * 0.6); }
 #endif
+roughnessFactor += (1.0 - slRibK) * 0.3;
 roughnessFactor = clamp(roughnessFactor, 0.045, 1.0);
 `;
 
@@ -614,7 +623,7 @@ var yA = `
   }
 #elif defined( USE_NORMALMAP_TANGENTSPACE )
   { vec3 mapN = texture2D(normalMap, slUv).xyz * 2.0 - 1.0;
-    mapN.xy *= normalScale * (1.0 - 0.45 * slWetK * slUp);
+    mapN.xy *= normalScale * (1.0 - 0.45 * slWetK * slUp) * slRibK;
     normal = normalize(tbn * mapN); }
 #endif
 `;
