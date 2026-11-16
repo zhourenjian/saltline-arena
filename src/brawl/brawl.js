@@ -662,7 +662,7 @@ function createBrawl(context, avatars) {
           .nextInput()
           .then((name) => {
             mine.switching = !1;
-            mic === mine && hud.note(name ? `🎙 Silent input — switched to "${name}"` : "🎙 The microphone is silent — check the browser's microphone permission or the input device.");
+            mic === mine && hud.note(name ? `🎙 Silent input — switched to "${name}"` : "🎙 The microphone is silent. In Chrome click the microphone icon in the address bar and pick another input (or check the system input).");
             !name && (mine.quiet = -30); // nothing else to try: do not nag every second
           })
           .catch(() => ((mine.switching = !1), (mine.quiet = -30)));
