@@ -961,7 +961,12 @@ function createSoldierInstance(THREE, CFG) {
       w.v.set(-0.034, lerp(1.68, 1.05, wCrouch), 0).add(w.v2.set(0, 0, 0.09).applyQuaternion(w.qa));
       const sp = held.sight;
       w.v2.set(arr(sp, 0), arr(sp, 1), arr(sp, 2)).applyQuaternion(weapon.quaternion);
-      weapon.position.lerp(w.v.sub(w.v2), wAds);
+      // slide the gun sideways and up only: along its own axis it stays where it was, so the stock stays at
+      // the shoulder instead of ending up inside the head
+      w.v.sub(w.v2).sub(weapon.position);
+      w.v2.set(0, 0, 1).applyQuaternion(weapon.quaternion);
+      w.v.addScaledVector(w.v2, -w.v.dot(w.v2));
+      weapon.position.addScaledVector(w.v, wAds);
     }
 
     // ---- arms

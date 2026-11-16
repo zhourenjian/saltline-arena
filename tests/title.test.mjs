@@ -60,6 +60,17 @@ try {
       if (d.err) { await page.waitFor(`__G.titleBattle.bots()[0].opp.visible`, 70000); }
       ok(!d.err && d.off < 0.09, `pitch ${pitch}: muzzle line misses the camera by ${d.off}`, d);
     }
+    // the stock stays about where it is when the gun is carried (at the shoulder) and out of the head
+    const rear = (ad) => page.ev(`window.__ad = ${ad}; __G.titleBattle.pitch = 0; return new Promise((res) => setTimeout(() => { const T = __G.titleBattle, b = T.bots()[0], V = __G.camera.position.constructor, p = new V(), d = new V();
+      if (!b.opp.muzzle(p, d)) return res({ err: 1 });
+      const r = p.clone().addScaledVector(d, -0.73), head = new V(b.p.x, b.p.y + 1.62, b.p.z);
+      res({ rear: [r.x - b.p.x, r.y - b.p.y, r.z - b.p.z], head: r.distanceTo(head) }); }, 1500))`);
+    await page.waitFor(`(() => { const V = __G.camera.position.constructor; return __G.titleBattle.bots()[0].opp.muzzle(new V(), new V()); })()`, 70000);
+    const hip = await rear(0), aim = await rear(1);
+    ok(!hip.err && !aim.err, "muzzle for the stock check", { hip, aim });
+    const moved = Math.hypot(hip.rear[0] - aim.rear[0], hip.rear[1] - aim.rear[1], hip.rear[2] - aim.rear[2]);
+    ok(moved < 0.25, `stock moves ${moved} m between carrying and aiming`, { hip, aim });
+    ok(aim.head > 0.14, `stock ${aim.head} m from the head centre (inside the head)`, aim);
     page.close();
   });
   await test("?battle=0 has no fight; leaving the title hides the fighters", async () => {
