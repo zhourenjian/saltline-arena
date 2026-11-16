@@ -389,6 +389,10 @@ if (typeof WebSocket !== "function") {
       // a large (fragmented-size) message is accepted, an oversize one closes the socket
       a.send({ t: "ping", at: "x".repeat(8000) });
       assert.equal((await a.wait("pong")).at.length, 8000);
+      // netstat is accepted with junk values and never answered or fatal
+      a.send({ t: "netstat", n: "x", avg: -5, p95: 1e12, max: null, via: "4g".repeat(20) });
+      a.send({ t: "ping", at: 1 });
+      assert.equal((await a.wait("pong", (m) => m.at === 1)).at, 1);
       a.send({ t: "hit", target: bw.id, part: "head" });
       const d = await b.wait("damage");
       assert.equal(d.from, aw.id);

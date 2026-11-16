@@ -104,6 +104,11 @@ function installViewport(context) {
         `pos ${p.pos.x.toFixed(1)},${p.pos.y.toFixed(1)},${p.pos.z.toFixed(1)} dt${((g.time && g.time.dt) || 0).toFixed(3)} frame${g.time && g.time.frame} cap${g.frameCap}`,
       ].join("\n");
     };
+    let netLine = () => {
+      let c = window.__saltlineNet,
+        st = c && c.pingStats && c.pingStats();
+      return st ? `ping avg${st.avg} p95${st.p95} max${st.max} net${st.netMax} queue${st.lagMax} >200:${st.over200}` : "ping -";
+    };
     let show = () => {
       let vv = window.visualViewport,
         a = document.getElementById("app");
@@ -113,6 +118,7 @@ function installViewport(context) {
         `screen ${screen.width}x${screen.height} avail ${screen.availWidth}x${screen.availHeight}`,
         `standalone ${isStandalone()}  fill ${root.style.getPropertyValue("--fill") || 0}  capped ${root.classList.contains("vp-capped")}`,
         `sab ${getComputedStyle(root).getPropertyValue("--sab")} sat ${getComputedStyle(root).getPropertyValue("--sat")}`,
+        netLine(),
         inputLine(),
         ...events.slice(-3).map((l) => l.slice(5, 120)),
       ].join("\n");

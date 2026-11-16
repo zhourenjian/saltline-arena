@@ -332,6 +332,13 @@ export function createDuelHub({
     ping(c, m) {
       emit(c, "pong", { at: m.at });
     },
+    // a client's own summary of its last ~30 s of ping samples (see src/versus/net.js); only logged
+    netstat(c, m) {
+      const n = (v, max = 60000) => (Number.isFinite(+v) ? Math.max(0, Math.min(max, Math.round(+v))) : 0);
+      log(
+        `net ${c.name || c.id}: n=${n(m.n, 100)} avg=${n(m.avg)} p95=${n(m.p95)} max=${n(m.max)} net-max=${n(m.netMax)} queue-max=${n(m.lagMax)} over200=${n(m.over200, 100)} via=${String(m.via || "-").slice(0, 12)}`,
+      );
+    },
   };
 
   return {

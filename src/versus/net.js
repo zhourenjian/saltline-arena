@@ -55,6 +55,7 @@ function saveVersusPrefs(p) {
 // client: { id, url, features, rtt, on(type, fn) → off, send(t, data), close(), get open }
 // rtt is the round trip to the server in ms (ping every PING_SECONDS, smoothed), null until known.
 var PING_SECONDS = 2;
+var REPORT_SECONDS = 30; // how often a client reports its ping summary to the server (for diagnosing mobile links)
 function connectDuel(url, hello, { timeoutMs = 6000, WebSocketImpl = globalThis.WebSocket } = {}) {
   return new Promise((resolve, reject) => {
     if (typeof WebSocketImpl !== "function") return reject(new Error("this browser has no WebSocket"));
@@ -73,6 +74,21 @@ function connectDuel(url, hello, { timeoutMs = 6000, WebSocketImpl = globalThis.
         rules: null,
         features: [],
         rtt: null,
+        // summary of the last ~30 s of pings (ms): total, network part, time queued behind our own main thread
+        pingStats() {
+          if (!samples.length) return null;
+          let ms = samples.map((x) => x.ms).sort((a, b) => a - b),
+            max = (k) => Math.round(Math.max(...samples.map((x) => x[k])));
+          return {
+            n: ms.length,
+            avg: Math.round(ms.reduce((a, b) => a + b, 0) / ms.length),
+            p95: Math.round(ms[Math.min(ms.length - 1, Math.floor(ms.length * 0.95))]),
+            max: Math.round(ms[ms.length - 1]),
+            netMax: max("net"),
+            lagMax: max("lag"),
+            over200: ms.filter((x) => x > 200).length,
+          };
+        },
         get open() {
           return !closed && ws.readyState === 1;
         },
@@ -111,6 +127,13 @@ function connectDuel(url, hello, { timeoutMs = 6000, WebSocketImpl = globalThis.
       },
       timer = setTimeout(() => fail(new Error(`no answer from ${url}`)), timeoutMs),
       pinger = 0,
+      samples = [], // last ping samples: { ms, net, lag }
+      lastReport = performance.now(),
+      report = () => {
+        lastReport = performance.now();
+        let s = client.pingStats();
+        s && client.send("netstat", { ...s, via: (navigator.connection && navigator.connection.effectiveType) || null });
+      },
       ping = () => client.send("ping", { at: performance.now() }),
       fail = (err) => {
         if (settled) return;
@@ -141,11 +164,21 @@ function connectDuel(url, hello, { timeoutMs = 6000, WebSocketImpl = globalThis.
         ((settled = !0), clearTimeout(timer), (client.id = m.id), (client.rules = m.rules || null));
         client.features = Array.isArray(m.features) ? m.features.map(String) : ["duel"];
         (ping(), (pinger = setInterval(ping, PING_SECONDS * 1000)));
+        try { globalThis.__saltlineNet = client; } catch {}
         return resolve(client);
       }
       if (m.t === "pong") {
-        let ms = performance.now() - +m.at;
-        Number.isFinite(ms) && ms >= 0 && ms < 60000 && (client.rtt = client.rtt == null ? ms : client.rtt * 0.6 + ms * 0.4);
+        let now = performance.now(),
+          ms = now - +m.at;
+        if (Number.isFinite(ms) && ms >= 0 && ms < 60000) {
+          client.rtt = client.rtt == null ? ms : client.rtt * 0.6 + ms * 0.4;
+          // ms: send → handled here. e.timeStamp: when the browser got the packet, so
+          // (timeStamp - at) is the network part and (now - timeStamp) waited behind our own work
+          let arrived = Number.isFinite(e.timeStamp) && e.timeStamp > +m.at && e.timeStamp <= now ? e.timeStamp : now;
+          samples.push({ ms, net: arrived - +m.at, lag: now - arrived });
+          samples.length > 15 && samples.shift();
+          now - lastReport > REPORT_SECONDS * 1000 && samples.length >= 5 && report();
+        }
       }
       fire(m.t, m);
     };
