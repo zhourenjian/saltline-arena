@@ -279,6 +279,27 @@ try {
     assert((await C.ev(`return window.__replayed`)) === 1, "the replay plays");
   });
 
+  await test("a silent default microphone: the game switches to the next input and remembers it", async () => {
+    await D.ev(`
+      localStorage.removeItem("saltline.mic.v1");
+      const ac = new AudioContext(), o = ac.createOscillator(), loud = ac.createMediaStreamDestination(), quiet = ac.createMediaStreamDestination();
+      o.connect(loud); o.start();
+      const tag = (stream, id) => (stream.getAudioTracks().forEach((t) => (t.getSettings = () => ({ deviceId: id }))), stream);
+      navigator.mediaDevices.enumerateDevices = async () => [{ kind: "audioinput", deviceId: "A", label: "Built-in" }, { kind: "audioinput", deviceId: "B", label: "iPhone" }];
+      navigator.mediaDevices.getUserMedia = async (c) => {
+        const want = c.audio && c.audio.deviceId && c.audio.deviceId.ideal;
+        return want === "B" ? tag(loud.stream, "B") : tag(quiet.stream, "A");
+      };`);
+    await D.keyDown("KeyV");
+    await D.waitFor(`__G.brawl.mic && __G.brawl.mic.ok`, 5000).catch(async (e) => {
+      throw new Error(e.message + " — " + (await D.ev(`return JSON.stringify({ mic: !!__G.brawl.mic, note: document.querySelector('.br-chat-note') && document.querySelector('.br-chat-note').textContent, role: __G.brawl.role })`)));
+    });
+    await D.waitFor(`__G.brawl.voice.level > 0.05`, 9000);
+    await D.waitFor(`localStorage.getItem("saltline.mic.v1") === "B"`, 3000);
+    await D.keyUp("KeyV");
+    await D.waitFor(`!__G.brawl.mic`, 3000);
+  });
+
   await test("Tab frees the mouse without pausing; a real click reaches 👎; Tab takes it back", async () => {
     await D.ev(`__G.brawl.action("say", { text: "from delta" })`);
     await C.waitFor(`document.querySelector('.br-chat-l li:last-child button[data-br="down"]')`, 5000);

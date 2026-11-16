@@ -645,7 +645,21 @@ function createBrawl(context, avatars) {
     if (mic && mic.ok) {
       // a microphone that delivers only silence (permission, wrong input, iOS muted it) says so
       mic.quiet = voice.level < 0.003 ? (mic.quiet || 0) + dt : 0;
-      mic.quiet > 1.2 && hud.note("🎙 The microphone is silent — check the browser's microphone permission or input.");
+      voice.level > 0.02 && !mic.kept && ((mic.kept = !0), voice.rememberInput());
+      if (mic.quiet > 1.2 && !mic.switching) {
+        // the default microphone delivers only silence: try the other inputs, one at a time
+        let mine = mic;
+        mine.switching = !0;
+        mine.quiet = 0;
+        voice
+          .nextInput()
+          .then((name) => {
+            mine.switching = !1;
+            mic === mine && hud.note(name ? `🎙 Silent input — switched to "${name}"` : "🎙 The microphone is silent — check the browser's microphone permission or the input device.");
+            !name && (mine.quiet = -30); // nothing else to try: do not nag every second
+          })
+          .catch(() => ((mine.switching = !1), (mine.quiet = -30)));
+      }
       mic.left -= dt;
       mic.left <= 0
         ? (endMic(), hud.note("Mic time is up."))

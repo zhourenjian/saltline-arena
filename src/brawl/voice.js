@@ -75,8 +75,18 @@ function createVoice({ rate = BRAWL_RULES.voiceRate } = {}) {
   }
 
   // ---- capture
-  async function start(onChunk) {
+  var MIC_KEY = "saltline.mic.v1";
+  let savedInput = () => {
+    try {
+      return localStorage.getItem(MIC_KEY) || "";
+    } catch {
+      return "";
+    }
+  };
+  // opts.deviceId: a specific microphone; opts.tried: device ids already found silent this talk
+  async function start(onChunk, opts = {}) {
     stop();
+    level = 0; // the previous talk's loudness says nothing about this microphone
     if (!canRecord()) throw new Error(recordProblem());
     // iOS: asking for echo cancellation / noise suppression turns on the system's voice-processing
     // unit for the whole page, which leaves every sound hissy and quiet, and it stays that way after
@@ -90,10 +100,13 @@ function createVoice({ rate = BRAWL_RULES.voiceRate } = {}) {
         session.type = "play-and-record";
       } catch {}
     }
-    let stream = await navigator.mediaDevices.getUserMedia({
-      audio: ios
+    let want = opts.deviceId || (opts.tried ? "" : savedInput()),
+      audioConstraints = ios
         ? { channelCount: 1, echoCancellation: !1, noiseSuppression: !1, autoGainControl: !1 }
-        : { channelCount: 1, echoCancellation: !0, noiseSuppression: !0, autoGainControl: !0 },
+        : { channelCount: 1, echoCancellation: !0, noiseSuppression: !0, autoGainControl: !0 };
+    want && (audioConstraints.deviceId = { ideal: want });
+    let stream = await navigator.mediaDevices.getUserMedia({
+      audio: audioConstraints,
       video: !1,
     }).catch((e) => {
       restoreSession();
@@ -118,7 +131,10 @@ function createVoice({ rate = BRAWL_RULES.voiceRate } = {}) {
         phase: 0,
         gain: 1, // software auto gain: phones' raw microphones are often very quiet
         onChunk,
+        deviceId: (stream.getAudioTracks()[0] && stream.getAudioTracks()[0].getSettings && stream.getAudioTracks()[0].getSettings().deviceId) || "",
+        tried: new Set([...(opts.tried || [])]),
       };
+    c.deviceId && c.tried.add(c.deviceId);
     node.onaudioprocess = (e) => {
       if (capture !== c) return;
       let input = e.inputBuffer.getChannelData(0),
@@ -149,6 +165,31 @@ function createVoice({ rate = BRAWL_RULES.voiceRate } = {}) {
     // a ScriptProcessor only runs while connected to the destination; its output is silent
     node.connect(ac.destination);
     capture = c;
+  }
+
+  // The browser's default microphone can be one that only delivers silence (a MacBook with the lid
+  // closed, a disconnected headset, a muted Bluetooth device). Switch to the next input that has not
+  // been tried in this talk; resolves to its name, or "" when there is none left.
+  async function nextInput() {
+    let c = capture;
+    if (!c || !navigator.mediaDevices.enumerateDevices) return "";
+    let list = [];
+    try {
+      list = (await navigator.mediaDevices.enumerateDevices()).filter((d) => d.kind === "audioinput" && d.deviceId && d.deviceId !== "communications" && !c.tried.has(d.deviceId));
+    } catch {}
+    // "default" would just be the same device again
+    let next = list.find((d) => d.deviceId !== "default") || list[0];
+    if (!next || capture !== c) return "";
+    let cb = c.onChunk;
+    await start(cb, { deviceId: next.deviceId, tried: c.tried });
+    return next.label || "another microphone";
+  }
+
+  // keep the microphone that produced sound, for the next time
+  function rememberInput() {
+    try {
+      capture && capture.deviceId && localStorage.setItem(MIC_KEY, capture.deviceId);
+    } catch {}
   }
 
   function flush(c) {
@@ -275,6 +316,8 @@ function createVoice({ rate = BRAWL_RULES.voiceRate } = {}) {
     play,
     record,
     playClip,
+    nextInput,
+    rememberInput,
     hasClip: (msg) => clips.has(msg),
     // a voice clip is sounding (or about to): the game turns its music down meanwhile
     get busy() {
