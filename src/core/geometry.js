@@ -346,14 +346,17 @@ function mergeGeometryParts(i) {
     );
   if (!e.length) return new BufferGeometry();
   let t = e.some((l) => l.attributes.color),
+    // "slRib" (vec3, container ribs: see the paint shader) rides along; geometries without it get zeros
+    rb = e.some((l) => l.attributes.slRib && l.attributes.slRib.itemSize === 3),
     n = e.map((l) => {
       let c = (l.index, l);
       if (t && !c.attributes.color) {
         let u = new Float32Array(c.attributes.position.count * 3).fill(1);
         c.setAttribute("color", new BufferAttribute(u, 3));
       }
+      if (rb && !c.attributes.slRib) c.setAttribute("slRib", new BufferAttribute(new Float32Array(c.attributes.position.count * 3), 3));
       for (let u of Object.keys(c.attributes))
-        ["position", "normal", "uv", "color"].includes(u) ||
+        ["position", "normal", "uv", "color", "slRib"].includes(u) ||
           c.deleteAttribute(u);
       return c;
     }),

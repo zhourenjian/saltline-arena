@@ -483,17 +483,38 @@ async function createWeapon(context) {
       setArmColors(c) {
         this.armColors = c ? { sleeve: c.sleeve || null, glove: c.glove || null } : null;
         if (!armMaterial) return;
-        // ratios in sRGB steps (not linear light): a perceptual scale keeps khaki khaki instead of
-        // blowing the fabric out, since the vertex colours already carry the weave's brightness
-        let to8 = (hex) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) || 1),
-          ratio = (hex, ref) => {
-            if (!hex) return [1, 1, 1];
-            let t = to8(hex),
-              r = to8(ref);
-            return t.map((v, i) => v / r[i]).map((v) => Math.min(v, 12));
+        // Each colour is a per-channel ratio in linear light: the wanted colour over what the arms
+        // look like now (the average vertex colour of that fabric times the material colour, which
+        // is far from the "#23262a" the material is declared with: the navy arms are strongly blue,
+        // which turned a tan sleeve teal), so the average fabric comes out as the wanted colour.
+        let lin = (v) => ((v /= 255), v <= 0.04045 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4)),
+          to8 = (hex) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) || 1),
+          mc = armMaterial.color,
+          avg = (isSleeve) => {
+            let n = 0,
+              sum = [0, 0, 0];
+            e.traverse((o) => {
+              if (!o.isMesh || o.material !== armMaterial || !o.geometry.attributes.color) return;
+              let a = o.geometry.attributes.color;
+              o.userData.arm0 || (o.userData.arm0 = a.array.slice());
+              let src = o.userData.arm0;
+              for (let i = 0; i < a.count; i++) {
+                let sr = src[i * 3],
+                  sb = src[i * 3 + 2];
+                if (sb > sr !== isSleeve || (sb > sr ? sb < sr * 1.3 : sr > 14)) continue;
+                n++;
+                for (let j = 0; j < 3; j++) sum[j] += src[i * 3 + j];
+              }
+            });
+            return n ? [sum[0] / n * mc.r, sum[1] / n * mc.g, sum[2] / n * mc.b].map((v) => Math.max(v, 1e-4)) : null;
           },
-          rs = ratio(c && c.sleeve, ARM_REF.sleeve),
-          rg = ratio(c && c.glove, ARM_REF.glove);
+          ratio = (hex, isSleeve) => {
+            let cur = avg(isSleeve);
+            if (!hex || !cur) return [1, 1, 1];
+            return to8(hex).map((v, i) => Math.min(lin(v) / cur[i], 60));
+          },
+          rs = ratio(c && c.sleeve, !0),
+          rg = ratio(c && c.glove, !1);
         e.traverse((o) => {
           if (!o.isMesh || o.material !== armMaterial || !o.geometry.attributes.color) return;
           let a = o.geometry.attributes.color;
@@ -502,7 +523,10 @@ async function createWeapon(context) {
           for (let i = 0; i < a.count; i++) {
             let r = src[i * 3],
               b = src[i * 3 + 2],
-              k = b > r ? rs : rg;
+              // the red-white-red bands round the forearm keep their colours (orange: very bright and
+              // red; white: no blue tint in a bluish fabric)
+              band = b > r ? b < r * 1.3 : r > 14,
+              k = band ? [1, 1, 1] : b > r ? rs : rg;
             a.setXYZ(i, r * k[0], src[i * 3 + 1] * k[1], b * k[2]);
           }
           a.needsUpdate = !0;

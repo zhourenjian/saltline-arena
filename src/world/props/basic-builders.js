@@ -22,6 +22,7 @@ import {
   Mi,
   Nc,
   Uc,
+  CA as ribProfile,
   Uo,
   Zg,
   _3,
@@ -236,7 +237,10 @@ function zA(i, e, t, n, s) {
     });
     ue.computeVertexNormals();
     let me = ue.attributes.position,
-      ee = new Float32Array(me.count * 3);
+      ee = new Float32Array(me.count * 3),
+      // per vertex for the far view (see the paint shader, SL_RIBFLAT): how far the vertex sits
+      // from the middle of the rib relief, the tilt of its rib face, and its depth in the groove
+      rib = new Float32Array(me.count * 3);
     for (let B = 0; B < me.count; B++) {
       let P = me.getX(B),
         V = me.getY(B),
@@ -244,6 +248,13 @@ function zA(i, e, t, n, s) {
         L = z(P, V, Y),
         Z = d - Math.abs(Y),
         J = mn(0.008, 0.034, Z);
+      {
+        let x0 = P - (v + 0.02),
+          slope = (ribProfile(x0 + 1e-3, Uo.P, Uo.d, Uo.fo, Uo.sl) - ribProfile(x0 - 1e-3, Uo.P, Uo.d, Uo.fo, Uo.sl)) / 2e-3;
+        rib[B * 3] = Math.min(Math.max(Z, 0), Uo.d) - Uo.d / 2;
+        rib[B * 3 + 1] = -Math.atan($ * slope);
+        rib[B * 3 + 2] = Z;
+      }
       L = [L[0] * (1 - 0.17 * J), L[1] * (1 - 0.18 * J), L[2] * (1 - 0.18 * J)];
       let oe = mn(r - 0.75, y, V);
       if (oe > 0) {
@@ -270,6 +281,7 @@ function zA(i, e, t, n, s) {
         (ee[B * 3 + 2] = L[2]));
     }
     (ue.setAttribute("color", new BufferAttribute(ee, 3)),
+      ue.setAttribute("slRib", new BufferAttribute(rib, 3)),
       c.buckets.get(Jt).geos.push(ue));
   }
   for (let $ of [-1, 1])

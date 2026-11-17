@@ -41,7 +41,41 @@ function patchMaterialShader(i, e) {
       .replace(
         "#include <common>",
         `#include <common>
+#ifdef SL_RIBFLAT
+attribute vec3 slRib;
+#endif
 ` + dA,
+      )
+      // container ribs (paint on geometry that carries the "rib" attribute): from about 30 m the relief
+      // is flattened - vertices pulled to the middle of the relief, their normals turned back to the
+      // flat wall's, the groove darkening averaged - so the ribs no longer beat against the pixel grid
+      // (the surface keeps its average shading; shadows keep the real ribs)
+      .replace(
+        "#include <beginnormal_vertex>",
+        `#include <beginnormal_vertex>
+#ifdef SL_RIBFLAT
+  vec3 slN0 = objectNormal;
+  { float cb = cos(slRib.y), sb = sin(slRib.y);
+    slN0 = normalize(vec3(objectNormal.x * cb - objectNormal.z * sb, objectNormal.y, objectNormal.x * sb + objectNormal.z * cb)); }
+  objectNormal = normalize(mix(objectNormal, slN0, slFlat));
+#endif`,
+      )
+      .replace(
+        "#include <begin_vertex>",
+        `#include <begin_vertex>
+#ifdef SL_RIBFLAT
+  transformed += slN0 * (slRib.x * slFlat);
+#endif`,
+      )
+      .replace(
+        "#include <color_vertex>",
+        `#include <color_vertex>
+#ifdef SL_RIBFLAT
+  float slFlat = smoothstep(30.0, 80.0, distance(cameraPosition, (modelMatrix * vec4(position, 1.0)).xyz));
+#endif
+#if defined(SL_RIBFLAT) && defined(USE_COLOR)
+  vColor.rgb *= mix(1.0, 0.91 / (1.0 - 0.18 * smoothstep(0.008, 0.034, slRib.z)), slFlat);
+#endif`,
       )
       .replace(
         "#include <project_vertex>",
@@ -303,7 +337,8 @@ async function createMaterials(context) {
       G && (T.defines.SL_TRIPLANAR = ""),
       j && (T.defines.SL_FX = ""),
       D.alphaCut && !G && (T.defines.SL_ACUT = ""),
-      D.ribs && !G && (T.defines.SL_RIBS = (+D.ribs).toFixed(1)));
+      D.ribs && !G && (T.defines.SL_RIBS = (+D.ribs).toFixed(1)),
+      D.set === "paint" && !G && q.vertexColors && (T.defines.SL_RIBFLAT = ""));
     let N = {
       uSlWet: r.wet,
       uSlWetP: {
