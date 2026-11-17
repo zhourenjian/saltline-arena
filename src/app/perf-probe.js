@@ -131,6 +131,48 @@ msaa ${q0.msaa} shadow ${q0.shadow} vol ${q0.volSteps} ao ${q0.ao ? 1 : 0} plana
       lines.join("\n")
     );
   }
+  // ?perf=watch: nothing is switched for the first 30 s, then one kind of change at a time, every 20 s,
+  // with the frame's GPU work logged every 5 s - to see whether the frame gets slower by itself (heat,
+  // something in the game) or after a particular change
+  let WATCH = new URLSearchParams(location.search).get("perf") === "watch",
+    W = { t0: 0, last: 0, step: 0, log: [], undo: null },
+    EVENTS = [
+      [30, "resolution 50% (2 s), back", () => setQ({ scale: (q0.scale || 1) * 0.5 })],
+      [50, "volumetric steps (2 s), back", () => setQ({ volSteps: 0 })],
+      [70, "bloom off (2 s), back", () => setQ({ bloom: !1 })],
+      [90, "hide level (2 s), back", () => hide([byName("level")])],
+      [110, "resolution 50% x3, back", () => setQ({ scale: (q0.scale || 1) * 0.5 })],
+    ];
+  function watch(frameSec) {
+    let [pos, look] = VIEWS[0];
+    (context.camera.position.copy(pos), context.camera.lookAt(look));
+    let now = performance.now() / 1000;
+    W.t0 || ((W.t0 = now), (W.last = now), (started = !0));
+    let t = now - W.t0;
+    if (W.log.length && W.done) return;
+    t >= 2 && (work.push(lastWork), vs.push(frameSec * 1000));
+    let ev = EVENTS[W.step];
+    if (ev && t >= ev[0] && !W.undo && !W.fired) {
+      ((W.fired = !0), (W.undo = ev[2]()), W.log.push(`  ${t.toFixed(0).padStart(4)} s  >> ${ev[1]}`));
+      ev[1].includes("x3") && (W.rep = 3);
+    }
+    if (ev && W.undo && t >= ev[0] + 2) {
+      (W.undo(), (W.undo = null));
+      if (W.rep && --W.rep > 0) ((W.undo = ev[2]()), (ev[0] = t));
+      else ((W.fired = !1), W.step++);
+    }
+    if (now - W.last >= 5) {
+      let r = context.renderer.info.render,
+        lights = 0;
+      context.scene.traverse((o) => o.isPointLight && o.visible && o.intensity > 0 && lights++);
+      W.log.push(`  ${t.toFixed(0).padStart(4)} s  work ${trimmed(work).toFixed(1).padStart(5)} ms  frame ${trimmed(vs).toFixed(1).padStart(5)} ms  calls ${r.calls}  lights ${lights}`);
+      ((work = []), (vs = []), (W.last = now));
+    }
+    t > 135 && (W.done = !0);
+    box.textContent =
+      header() + `\nWATCH: nothing changes for 30 s, then one change every 20 s (keep still)\n\n` + W.log.join("\n") + (W.done ? "\n\ndone (screenshot this and send it)" : "");
+    W.done && ((done = !0), console.log("[perf]\n" + box.textContent));
+  }
   let final = "";
   function afterRun() {
     // wall clock, not the game's dt (which is clamped on slow frames)
@@ -168,6 +210,7 @@ msaa ${q0.msaa} shadow ${q0.shadow} vol ${q0.volSteps} ao ${q0.ao ? 1 : 0} plana
     },
     // called before the frame is rendered: fixed camera, the schedule
     frame(dt, frameSec) {
+      if (WATCH) return void watch(frameSec);
       let [pos, look] = VIEWS[(cur && cur.opt.view) || 0];
       context.camera.position.copy(pos);
       context.camera.lookAt(look);
@@ -218,7 +261,7 @@ msaa ${q0.msaa} shadow ${q0.shadow} vol ${q0.volSteps} ao ${q0.ao ? 1 : 0} plana
     },
     // called after the frame is rendered: wait for the GPU, time the whole frame's work
     afterRender(start) {
-      if (!started || (done && !after.sync)) return;
+      if (!started || (done && (WATCH || !after.sync))) return;
       lastCpu = performance.now() - start;
       try {
         (context.renderer.setRenderTarget(null), gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, pixel));
