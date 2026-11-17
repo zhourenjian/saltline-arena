@@ -89,6 +89,7 @@ async function createGround(context) {
     m = (M, E) =>
       M > Li.x0 && M < Li.x0 + Li.size && E > Li.z0 && E < Li.z0 + Li.size,
     A = 0,
+    rainOff = !1,
     _ = {
       root: d,
       apron: v.mesh,
@@ -132,6 +133,9 @@ async function createGround(context) {
         y.enabled = !!M;
       },
       update(M) {
+        // the Rain setting (context.rainOff, from the settings menu)
+        let off = !!context.rainOff;
+        off !== rainOff && ((rainOff = off), x.setRain(off ? 0 : 0.6, !0));
         ((A += M),
           x.update(M),
           (v.uniforms.uTime.value = A),

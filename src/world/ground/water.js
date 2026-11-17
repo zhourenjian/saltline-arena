@@ -520,8 +520,8 @@ function Nb(i, e) {
     rain: v,
     splash: y,
     wind: p.uVel.value,
-    setRain(w) {
-      m = Math.min(1, Math.max(0, w));
+    setRain(w, snap) {
+      ((m = Math.min(1, Math.max(0, w))), snap && (b = m));
     },
     get rainLevel() {
       return b;

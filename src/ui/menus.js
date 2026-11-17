@@ -9,6 +9,7 @@ var DEFAULT_SETTINGS = {
   quality: "auto",
   sens: 1,
   invertY: !1,
+  rain: !0,
   volume: 0.8,
   fov: PLAYER_DIMENSIONS.fov,
 };
@@ -27,6 +28,7 @@ function loadSettings() {
         (i.quality = e.quality),
       Number.isFinite(e.sens) && (i.sens = Math.min(3, Math.max(0.2, e.sens))),
       (i.invertY = !!e.invertY),
+      e.rain === !1 && (i.rain = !1),
       Number.isFinite(e.volume) &&
         (i.volume = Math.min(1, Math.max(0, e.volume))),
       Number.isFinite(e.fov) && (i.fov = Math.min(95, Math.max(60, e.fov))));
@@ -210,6 +212,7 @@ function createMenus(context, e) {
           <div class="seg" role="group" aria-labelledby="l-q">${QUALITY_NAMES.map((U) => `<button data-q="${U}" aria-pressed="false">${U}</button>`).join("")}</div></div>
         <div class="row"><label for="s-sens">Mouse sensitivity</label><div class="slider"><input id="s-sens" type="range" min="0.2" max="3" step="0.05"><output data-o="sens"></output></div></div>
         <div class="row"><label id="l-inv">Invert Y</label><button class="toggle" data-act="invert" aria-labelledby="l-inv" aria-pressed="false"><i></i><span>Off</span></button></div>
+        <div class="row"><label id="l-rain">Rain</label><button class="toggle" data-act="rain" aria-labelledby="l-rain" aria-pressed="true"><i></i><span>On</span></button></div>
         <div class="row"><label for="s-vol">Master volume</label><div class="slider"><input id="s-vol" type="range" min="0" max="100" step="1"><output data-o="vol"></output></div></div>
         <div class="row"><label for="s-fov">Field of view</label><div class="slider"><input id="s-fov" type="range" min="60" max="95" step="1"><output data-o="fov"></output></div></div>
         <div class="row" data-row="fs"><label id="l-fs">Display</label><button class="btn small" data-act="fullscreen" aria-labelledby="l-fs fs-t"><span id="fs-t">Enter fullscreen</span></button></div>
@@ -249,6 +252,8 @@ function createMenus(context, e) {
     if (
       ((!U || U === "sens") && (context.input.sensitivity = n.sens),
       (!U || U === "invertY") && (context.input.invertY = n.invertY),
+      // rain off: no falling drops or splashes, no ripples in the puddles, no rain sound (saves GPU on phones)
+      (!U || U === "rain") && (context.rainOff = !n.rain),
       !U || U === "volume")
     )
       try {
@@ -299,6 +304,9 @@ function createMenus(context, e) {
     let T = o('[data-act="invert"]');
     (T.setAttribute("aria-pressed", String(n.invertY)),
       (T.querySelector("span").textContent = n.invertY ? "On" : "Off"),
+      (T = o('[data-act="rain"]')),
+      T.setAttribute("aria-pressed", String(n.rain)),
+      (T.querySelector("span").textContent = n.rain ? "On" : "Off"),
       (c("qnote").textContent = autoFrom
         ? `Lowered automatically from ${autoFrom[0].toUpperCase() + autoFrom.slice(1)} to keep the frame rate up. Pick a preset to try again.`
         : n.quality === "auto"
@@ -405,6 +413,8 @@ function createMenus(context, e) {
           ? S()
           : D === "invert"
             ? ((n.invertY = !n.invertY), v("invertY"), g(), saveSettings(n))
+            : D === "rain"
+            ? ((n.rain = !n.rain), v("rain"), g(), saveSettings(n))
             : D === "fullscreen"
               ? M()
               : D && e[D]

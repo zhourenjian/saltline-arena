@@ -160,7 +160,7 @@ var AR = `
   if (wsum > 0.004) {
     float rf = 1.0 - smoothstep(10.0, 34.0, gDist);
     vec2 rip = vec2(0.0);
-    if (rf > 0.0) {
+    if (rf > 0.0 && uRain > 0.01) {
       vec2 gp2 = vec2(0.8 * gxz.x - 0.6 * gxz.y, 0.6 * gxz.x + 0.8 * gxz.y);
       vec2 r2 = gRipple(gp2, uTime * 0.87, 1.31, 2.0);
       rip = gRipple(gxz, uTime, 0.83, 1.0) + vec2(0.8 * r2.x + 0.6 * r2.y, -0.6 * r2.x + 0.8 * r2.y) * 0.9 + gRipple(gxz.yx, uTime * 1.13, 0.57, 3.0).yx * 0.6;
