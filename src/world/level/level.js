@@ -123,7 +123,7 @@ async function createLevel(context) {
   } catch (z) {
     console.error("[level] label atlas failed", z);
   }
-  let f = batchStaticMeshes(t.staticRoot);
+  let f = batchStaticMeshes(t.staticRoot, { cell: 12 });
   ((f.name = "level-merged"), e.add(f), e.add(t.dynRoot));
   for (let z of [o, r, a]) {
     for (let H = z.children.length - 1; H >= 0; H--) z.remove(z.children[H]);

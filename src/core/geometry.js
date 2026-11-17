@@ -368,11 +368,16 @@ function mergeGeometryParts(i) {
 
 function batchStaticMeshes(
   i,
-  { castShadow: e = !0, receiveShadow: t = !0 } = {},
+  { castShadow: e = !0, receiveShadow: t = !0, cell = 0, cellTris = 2e4 } = {},
 ) {
   i.updateMatrixWorld(!0);
+  // cell > 0: a material with at least cellTris triangles is merged per cell of a cell x cell metre grid
+  // (by each mesh's centre) instead of into one mesh over the whole map, which the camera can never
+  // cull, so every frame paid for all of its triangles. Lighter materials stay whole: splitting them
+  // would add draw calls (in the shadow pass too) for little geometry.
   let n = new Map(),
-    s = [];
+    s = [],
+    ctr = new Vector3();
   i.traverse((r) => {
     if (!r.isMesh) return;
     let a = r,
@@ -403,13 +408,33 @@ function batchStaticMeshes(
       n.set(c, {
         mat: r.material,
         geos: [],
+        cells: [],
+        tris: 0,
         cast: r.castShadow,
         recv: r.receiveShadow,
         layers: r.layers.mask,
       });
-    let u = r.geometry.clone();
-    (u.applyMatrix4(r.matrixWorld), n.get(c).geos.push(u));
+    let u = r.geometry.clone(),
+      g = n.get(c);
+    (cell > 0 &&
+      (r.geometry.boundingBox || r.geometry.computeBoundingBox(),
+      r.geometry.boundingBox.getCenter(ctr).applyMatrix4(r.matrixWorld),
+      g.cells.push(Math.floor(ctr.x / cell) + "," + Math.floor(ctr.z / cell))),
+      (g.tris += (u.index ? u.index.count : u.attributes.position.count) / 3),
+      u.applyMatrix4(r.matrixWorld),
+      g.geos.push(u));
   });
+  if (cell > 0)
+    for (let [c, g] of [...n]) {
+      if (g.tris < cellTris) continue;
+      n.delete(c);
+      let by = new Map();
+      g.geos.forEach((u, k) => {
+        let key = c + "|" + g.cells[k];
+        by.has(key) || (by.set(key, { ...g, geos: [] }), n.set(key, by.get(key)));
+        by.get(key).geos.push(u);
+      });
+    }
   let o = new Group();
   for (let r of n.values()) {
     let a = new Mesh(mergeGeometryParts(r.geos), r.mat);
