@@ -161,6 +161,9 @@ await test("brawl on a phone: the MENU button is visible, unobstructed, and open
   const stats = await rect(page, ".net-stats"),
     board = await rect(page, ".br-side");
   assert(!overlap(btn, stats), "FPS / ping readout is not on top of the button", { btn, stats });
+  await page.waitFor(`/\\d+\u00d7\\d+ \\d+% [A-Z]+/.test(document.querySelector(".net-stats .res").textContent)`, 5000);
+  const res = await rect(page, ".net-stats .res");
+  assert(res && res.shown && !overlap(btn, res), "render resolution line is shown and clear of the button", { btn, res });
   assert(!overlap(btn, board), "brawl board is not on top of the button", { btn, board });
   const ammo = await rect(page, ".h-ammo");
   assert(!overlap(board, ammo), "brawl board is not on top of the ammo counter (portrait)", { board, ammo });
@@ -483,6 +486,20 @@ await test("a phone that cannot hold 60 falls back to a steady 30 fps (frame cap
   assert(q.name === "low" && q.shadow === 1024 && q.volSteps === 8, "phones start on the cheaper low preset", q);
   const min = await page.ev(`return !!window.matchMedia("(pointer: coarse)").matches`);
   assert(typeof min === "boolean", "pointer media query available");
+});
+
+await test("phone: picking Ultra in settings keeps the phone adjustments; an automatic drop shows in the menu", async () => {
+  const page = await phone("&noinstall=1", spoof(IPHONE), queryAuto);
+  pages.push(page);
+  const q0 = await page.ev(`return __G.quality`);
+  assert(q0.name === "low" && q0.motionBlur === false && q0.lite === true && q0.msaa === 0, "phone default: light low preset", q0);
+  await page.ev(`const b = document.querySelector('.menu .seg button[data-q="ultra"]'); b && b.click()`);
+  const q = await page.ev(`return __G.quality`);
+  assert(q.name === "ultra" && q.motionBlur === false && q.lite === true && q.msaa <= 2 && q.shadow <= 2048, "ultra on a phone is the light ultra", q);
+  await page.ev(`__G.render.setQuality({ ...__G.quality, name: "high" }); __G.events.emit("quality:auto", { name: "high", from: "ultra" })`);
+  const m = await page.ev(`return { pressed: [...document.querySelectorAll('.menu .seg button[aria-pressed="true"]')].map((b) => b.dataset.q), note: document.querySelector('.menu [data-f="qnote"]').textContent }`);
+  assert(m.pressed.includes("high") && /Lowered automatically from Ultra/.test(m.note), "menu shows the preset really running", m);
+  await page.ev(`localStorage.removeItem("saltline.settings.v1")`);
 });
 
 for (const p of pages) p.close();

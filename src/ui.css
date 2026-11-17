@@ -2139,6 +2139,21 @@ kbd {
 .net-stats .bad {
   color: var(--alarm);
 }
+/* render resolution line under the FPS/ping box (out of flow, so it does not widen the box) */
+.net-stats .res {
+  position: absolute;
+  right: -1px;
+  top: calc(100% + 3px);
+  padding: 2px 6px 1px;
+  font-size: 9px;
+  white-space: nowrap;
+  color: var(--bone-dim);
+  background: var(--plate);
+  border: 1px solid var(--line);
+}
+.net-stats .res:empty {
+  display: none;
+}
 
 /* ---- brawl HUD ---- */
 .br-tag {

@@ -1,6 +1,7 @@
 // DOM menus, persisted settings and controls panels.
 import { listen } from "../core/lifetime.js";
 import { PLAYER_DIMENSIONS, QUALITY_PRESETS } from "../core/config.js";
+import { presetFor } from "../core/quality.js";
 
 var SETTINGS_KEY = "saltline.settings.v1";
 
@@ -235,7 +236,15 @@ function createMenus(context, e) {
     h = o("#s-vol"),
     f = o("#s-fov"),
     p = "none",
-    d = null;
+    d = null,
+    autoFrom = null;
+  // the renderer lowered the preset to hold the frame rate: show the one really running
+  context.events.on("quality:auto", (U) => {
+    autoFrom || (autoFrom = U && U.from);
+    try {
+      g();
+    } catch {}
+  });
   function v(U) {
     if (
       ((!U || U === "sens") && (context.input.sensitivity = n.sens),
@@ -261,24 +270,22 @@ function createMenus(context, e) {
           !context.params.q &&
           n.quality !== (context.quality && context.quality.name)))
     ) {
-      let T = QUALITY_PRESETS[n.quality];
+      let T = presetFor(n.quality);
       if (T)
         try {
+          autoFrom = null;
           context.render && context.render.setQuality
-            ? context.render.setQuality({
-                ...T,
-              })
-            : (context.quality = {
-                ...T,
-              });
+            ? context.render.setQuality(T)
+            : (context.quality = T);
         } catch (D) {
           console.error("[game] setQuality failed", D);
         }
     }
   }
   function g() {
+    // the preset actually running: the renderer may have lowered the one picked here
     let U =
-      n.quality === "auto"
+      n.quality === "auto" || autoFrom
         ? context.quality && context.quality.name
         : n.quality;
     for (let D of r(".seg button"))
@@ -292,8 +299,9 @@ function createMenus(context, e) {
     let T = o('[data-act="invert"]');
     (T.setAttribute("aria-pressed", String(n.invertY)),
       (T.querySelector("span").textContent = n.invertY ? "On" : "Off"),
-      (c("qnote").textContent =
-        n.quality === "auto"
+      (c("qnote").textContent = autoFrom
+        ? `Lowered automatically from ${autoFrom[0].toUpperCase() + autoFrom.slice(1)} to keep the frame rate up. Pick a preset to try again.`
+        : n.quality === "auto"
           ? `Quality was picked for this device (${U || "default"}). Lower it if the frame rate struggles.`
           : "Quality changes apply at once; shadows and reflections may take a moment to rebuild."));
   }

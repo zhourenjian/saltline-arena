@@ -42,6 +42,7 @@ import {
   boxGeometry,
   createMesh,
 } from "../core/geometry.js";
+import { presetFor } from "../core/quality.js";
 import { Hy, Vy, createNoiseTexture } from "./sky.js";
 import { Gy, Xy, Yy, installSoftShadows } from "./shadows.js";
 import {
@@ -284,7 +285,25 @@ async function createRenderer(context) {
     capHits: 0,
     min: 0.6,
   };
-  S.min = S.touch ? 0.45 : 0.6;
+  // phones: the floor is for the picture as a whole (preset scale x dynamic scale), not the dynamic
+  // scale alone, so even the lowest preset cannot fall below ~60% of the 2x canvas. Past that point a
+  // 30 fps cap (below) is the better trade than a picture too coarse to make out players.
+  S.min = 0.6;
+  let minScale = () =>
+    S.touch ? Math.min(1, Math.ceil((0.6 / (context.quality.scale || 1)) * 10 - 1e-6) / 10) : S.min,
+    lowerPreset = () => ({ ultra: "high", high: "medium", medium: "low" })[context.quality.name];
+  function dropPreset(F) {
+    let ne = lowerPreset(),
+      from = context.quality.name,
+      q = ne && presetFor(ne);
+    if (!q) return !1;
+    ((S.floorHits = 0), (S.settle = 2), (S.upDelay = 4), (S.acc = 0), (S.n = 0));
+    console.log("[render] frame time " + F.toFixed(0) + " ms: dropping quality " + from + " -> " + ne);
+    try {
+      (N.setQuality(q), context.events.emit("quality:auto", { name: ne, from }));
+    } catch {}
+    return !0;
+  }
   function z(ie) {
     if (!S.enabled || !_ || ie > 1500) return;
     if (((S.settle -= ie / 1e3), (S.upWait -= ie / 1e3), S.settle > 0)) {
@@ -296,51 +315,35 @@ async function createRenderer(context) {
     ((S.acc = 0), (S.n = 0));
     // with a frame cap the interval between frames is the cap's, not what the GPU needs
     context.frameCap && (F = Math.max(1000 / 60, F - (1000 / context.frameCap - 1000 / 60)));
-    let X = S.scale;
+    let X = S.scale,
+      lo = minScale();
+    // phones: effects go before resolution - a slow frame first steps the preset down (each phone
+    // preset is lighter, see core/quality.js) and only the lowest preset gives up resolution
+    if (S.touch && F > 21.5 && lowerPreset()) {
+      ((S.floorHits = (S.floorHits || 0) + 1), S.floorHits >= 2 && dropPreset(F));
+      return;
+    }
     if (
-      (F > 21.5 && X > S.min
-        ? ((X = F > 45 ? S.min : Math.max(S.min, X - (F > 30 ? 0.2 : 0.1))),
+      (F > 21.5 && X > lo
+        ? ((X = F > 45 ? lo : Math.max(lo, X - (F > 30 ? 0.2 : 0.1))),
           (S.upDelay = Math.min(60, S.upDelay * 2)),
           (S.upWait = S.upDelay))
         : F < 17.4 && X < 1 && S.upWait <= 0
           ? ((X = Math.min(1, X + 0.1)), (S.upWait = 2))
           : F < 17.4 && X >= 1 && (S.upDelay = 4),
       (X = Math.round(X * 10) / 10),
-      X <= S.min && F > 26)
+      X <= lo && F > 26)
     ) {
-      S.floorHits = (S.floorHits || 0) + 1;
-      let ne = {
-        ultra: "high",
-        high: "medium",
-        medium: "low",
-      }[context.quality.name];
-      if (S.floorHits >= 2 && ne && QUALITY_PRESETS[ne]) {
-        ((S.floorHits = 0),
-          (S.scale = 0.8),
-          (S.settle = 2),
-          (S.upDelay = 4),
-          console.log(
-            "[render] frame time " +
-              F.toFixed(0) +
-              " ms at minimum scale: dropping quality to " +
-              ne,
-          ));
-        try {
-          (N.setQuality({
-            ...QUALITY_PRESETS[ne],
-          }),
-            context.events.emit("quality:auto", {
-              name: ne,
-            }));
-        } catch {}
+      if (((S.floorHits = (S.floorHits || 0) + 1), S.floorHits >= 2 && dropPreset(F))) {
+        S.scale = 0.8;
         return;
       }
     } else S.floorHits = 0;
     // a phone that heats up and cannot hold 60 even at the lowest quality and resolution: a steady
     // 30 fps (every second display frame) is smoother and cooler than a wavering 40
-    if (S.touch && context.quality.name === "low" && !context.frameCap && X <= S.min && F > 22) {
+    if (S.touch && !lowerPreset() && !context.frameCap && X <= lo && F > 22) {
       if (++S.capHits >= 3) {
-        ((context.frameCap = 30), (S.capHits = 0), (S.scale = 0.8), (S.settle = 2), (S.upDelay = 4), (X = S.scale));
+        ((context.frameCap = 30), (S.capHits = 0), (S.scale = 1), (S.settle = 2), (S.upDelay = 4), (X = S.scale));
         console.log("[render] frame time " + F.toFixed(0) + " ms at the lowest settings: capping at 30 fps");
         try {
           context.events.emit("perf:framecap", { fps: 30 });
