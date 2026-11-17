@@ -17,6 +17,9 @@ function chooseQuality(i) {
       shadow: 1024,
       volSteps: 8,
       rain: 0.35,
+      // no lens extras (sun flare, lens dirt, anamorphic streak and its two blur passes, film grain):
+      // they do not help to see players and cost full-screen passes on a phone that already runs warm
+      lite: !0,
     };
   let t = "";
   try {

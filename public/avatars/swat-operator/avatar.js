@@ -675,12 +675,17 @@ function acquireShared(THREE, CFG) {
   // a little self-illumination in the surface's own colour: against the light or in deep shadow the
   // outfit keeps its colour instead of turning into a black silhouette (readability, fair play)
   const FILL = 0.2;
+  // seen from a distance (fades in from 6 m to 35 m, nothing up close): a faint edge light and a little
+  // lift, so a player far away separates from the background without a name tag. Computed per pixel from
+  // the normal and the view direction, so it follows turning, aiming and falling with no extra pass.
+  const RIM = '\n\t{ float slFar = smoothstep(6.0, 35.0, length(vViewPosition)); float slRim = pow(1.0 - clamp(dot(normalize(normal), normalize(vViewPosition)), 0.0, 1.0), 2.5);'
+    + ' totalEmissiveRadiance += (diffuseColor.rgb * 0.5 + vec3(0.55, 0.62, 0.72) * 0.5) * slRim * 0.24 * slFar + diffuseColor.rgb * 0.10 * slFar; }';
   const M = (o) => {
     const m = new THREE.MeshStandardMaterial(Object.assign({ vertexColors: true, metalness: 0 }, o));
     m.onBeforeCompile = (sh) => {
-      sh.fragmentShader = sh.fragmentShader.replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\n\ttotalEmissiveRadiance += diffuseColor.rgb * ' + FILL.toFixed(2) + ';');
+      sh.fragmentShader = sh.fragmentShader.replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\n\ttotalEmissiveRadiance += diffuseColor.rgb * ' + FILL.toFixed(2) + ';' + RIM);
     };
-    m.customProgramCacheKey = () => 'soldier-fill';
+    m.customProgramCacheKey = () => 'soldier-fill-rim';
     return m;
   };
   const mats = {

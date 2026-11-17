@@ -390,13 +390,13 @@ void main(){
   col = mix(col, soft, uAds * 0.75 * smoothstep(0.22, 0.85, r2));
   // bloom (energy conserving mix), lens dirt, anamorphic streak
   vec3 bloom = texture2D(tBloom, vUv).rgb;
-  vec3 dirt = texture2D(tDirt, vUv).rgb;
+  vec3 dirt = (uDirt + uFlare) > 0.0 ? texture2D(tDirt, vUv).rgb : vec3(0.0);
   col = mix(col, bloom, uBloom);
   col += bloom * dirt * uDirt;
-  col += texture2D(tStreak, vUv).rgb * vec3(0.45, 0.62, 1.0) * uStreak;
+  if (uStreak > 0.0) col += texture2D(tStreak, vUv).rgb * vec3(0.45, 0.62, 1.0) * uStreak;
   // sun glare + flare (occlusion-tested)
   float vis = ad.g * uSunOn;
-  if (vis > 0.002) { vec3 fl = flare(vUv, uSunUv, vis) * uFlare; col += fl * (1.0 + dirt * 1.5); }
+  if (vis > 0.002 && uFlare > 0.0) { vec3 fl = flare(vUv, uSunUv, vis) * uFlare; col += fl * (1.0 + dirt * 1.5); }
   // exposure: manual * eye adaptation
   col *= slExposure();
   col += vec3(1.0, 0.97, 0.9) * uFlash * 2.5;
@@ -429,7 +429,7 @@ void main(){
 }`;
 
 var iA = `${Js}
-uniform sampler2D tSrc; uniform vec2 uTexel; uniform float uTime, uGrain, uSharpen, uFxaa;
+uniform sampler2D tSrc; uniform vec2 uTexel; uniform float uTime, uGrain, uSharpen, uFxaa, uAspect, uFocus;
 void main(){
   vec4 M = texture2D(tSrc, vUv);
   vec3 col = M.rgb;
@@ -449,12 +449,21 @@ void main(){
   }
   // light unsharp mask, backed off on strong edges (those belong to FXAA)
   vec3 blur = (NW.rgb + NE.rgb + SW.rgb + SE.rgb) * 0.25;
-  col += (M.rgb - blur) * uSharpen * (1.0 - smoothstep(0.04, 0.22, contrast));
-  // animated, luminance-weighted film grain
-  vec2 seed = gl_FragCoord.xy + fract(uTime * vec2(7.31, 3.17)) * vec2(311.7, 173.3);
-  float g = hash12(seed) + hash12(seed + 57.3) - 1.0;
+  // centre focus: what the crosshair looks at (distant players) is sharpened and given a little more
+  // local contrast; the periphery is left a touch softer (free: the taps are already fetched)
+  vec2 fc = (vUv - 0.5) * vec2(uAspect, 1.0);
+  float fr = smoothstep(0.10, 0.62, length(fc));      // 0 at the crosshair .. 1 towards the screen edge
+  float sharpW = mix(1.0 + 1.6 * uFocus, 1.0 - 0.75 * uFocus, fr);
+  float edgeKeep = mix(0.30, 0.22, fr);               // centre: sharpen right up to fairly strong edges
+  col += (M.rgb - blur) * uSharpen * sharpW * (1.0 - smoothstep(0.04, edgeKeep, contrast));
+  col = mix(col, blur, 0.30 * uFocus * smoothstep(0.35, 1.0, fr));
+  col = mix(col, col * col * (3.0 - 2.0 * col), 0.14 * uFocus * (1.0 - fr));
   float l = dot(col, vec3(0.299, 0.587, 0.114));
-  col += g * uGrain * mix(1.0, 0.30, smoothstep(0.25, 0.9, l)) * (0.35 + 0.65 * smoothstep(0.0, 0.08, l));
+  if (uGrain > 0.0) {
+    vec2 seed = gl_FragCoord.xy + fract(uTime * vec2(7.31, 3.17)) * vec2(311.7, 173.3);
+    float g = hash12(seed) + hash12(seed + 57.3) - 1.0;
+    col += g * uGrain * mix(1.0, 0.30, smoothstep(0.25, 0.9, l)) * (0.35 + 0.65 * smoothstep(0.0, 0.08, l));
+  }
   // dither against banding in the sky gradients
   col += (hash12(gl_FragCoord.xy * 1.37 + 11.0) + hash12(gl_FragCoord.xy * 0.71 + 3.0) - 1.0) / 255.0;
   gl_FragColor = vec4(col, 1.0);
@@ -1006,6 +1015,12 @@ ${fe}`,
       uFxaa: {
         value: 1,
       },
+      uAspect: {
+        value: 16 / 9,
+      },
+      uFocus: {
+        value: 1,
+      },
     }),
     ie = new Matrix4(),
     F = new Matrix4(),
@@ -1205,6 +1220,7 @@ ${fe}`,
           l(C, y.up[bt]),
           (ut = y.up[bt]));
       let nn = 1 / y.streakA.width;
+      ve.lite ||
       ((G.uniforms.tSrc.value = y.down[2].texture),
         G.uniforms.uDir.value.set(nn * 1.5, 0),
         (G.uniforms.uThreshold.value = g.streakThreshold),
@@ -1255,9 +1271,9 @@ ${fe}`,
         (be.uAspect.value = Re),
         (be.uTime.value = ae),
         (be.uBloom.value = ve.bloom ? g.bloom : 0),
-        (be.uDirt.value = ve.bloom ? g.dirt : 0),
-        (be.uStreak.value = ve.bloom ? g.streak : 0),
-        (be.uFlare.value = g.flare),
+        (be.uDirt.value = ve.bloom && !ve.lite ? g.dirt : 0),
+        (be.uStreak.value = ve.bloom && !ve.lite ? g.streak : 0),
+        (be.uFlare.value = ve.lite ? 0 : g.flare),
         (be.uAgxMix.value = g.agxMix),
         (be.uCA.value = g.ca),
         (be.uVignette.value = g.vignette),
@@ -1275,7 +1291,9 @@ ${fe}`,
       let be = K.uniforms;
       (be.uTexel.value.set(1 / M.w, 1 / M.h),
         (be.uTime.value = ae),
-        (be.uGrain.value = g.grain),
+        (be.uGrain.value = ve.lite ? 0 : g.grain),
+        (be.uAspect.value = Re),
+        (be.uFocus.value = ve.focus === void 0 ? 1 : +ve.focus),
         (be.uSharpen.value = g.sharpen),
         l(K, null));
     }
