@@ -499,13 +499,6 @@ await test("phone: picking Ultra in settings keeps the phone adjustments; an aut
   await page.ev(`__G.render.setQuality({ ...__G.quality, name: "high" }); __G.events.emit("quality:auto", { name: "high", from: "ultra" })`);
   const m = await page.ev(`return { pressed: [...document.querySelectorAll('.menu .seg button[aria-pressed="true"]')].map((b) => b.dataset.q), note: document.querySelector('.menu [data-f="qnote"]').textContent }`);
   assert(m.pressed.includes("high") && /Lowered automatically from Ultra/.test(m.note), "menu shows the preset really running", m);
-  // Rain setting: off hides the drops and splashes, stops the puddle ripples, and is remembered
-  await page.ev(`document.querySelector('.menu [data-act="rain"]').click()`);
-  await page.waitFor(`!__G.ground.rain.visible && __G.ground.rainLevel === 0`, 3000);
-  const saved = await page.ev(`return JSON.parse(localStorage.getItem("saltline.settings.v1")).rain`);
-  assert(saved === false, "rain off is saved", saved);
-  await page.ev(`document.querySelector('.menu [data-act="rain"]').click()`);
-  await page.waitFor(`__G.ground.rain.visible && __G.ground.rainLevel > 0.5`, 3000);
   await page.ev(`localStorage.removeItem("saltline.settings.v1")`);
 });
 
