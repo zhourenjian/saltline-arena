@@ -256,8 +256,7 @@ async function bootSystems(options, setFrame) {
       "[boot] render.onLevelReady failed: " + ((h && h.stack) || h),
     );
   }
-  let averageFrameSeconds = 0,
-    lastCpuMs = 0;
+  let averageFrameSeconds = 0;
   if (
     ((window.__stats = () => ({
       ...(context.render.stats ? context.render.stats() : {}),
@@ -384,7 +383,7 @@ async function bootSystems(options, setFrame) {
           (context.camera.position.copy(cameraOverride.pos),
           context.camera.lookAt(cameraOverride.look)),
         context.bench && context.bench.frame(f),
-        context.perfProbe && context.perfProbe.frame(p, f, lastCpuMs));
+        context.perfProbe && context.perfProbe.frame(p, f));
       try {
         context.render.frame(p);
       } catch (v) {
@@ -392,7 +391,7 @@ async function bootSystems(options, setFrame) {
           ((updateSystem.err.render = 1),
           console.error("[loop] render.frame threw: " + ((v && v.stack) || v)));
       }
-      ((lastCpuMs = performance.now() - h),
+      (context.perfProbe && context.perfProbe.afterRender(h),
         context.input.endFrame && context.input.endFrame(),
         window.__frames++,
         window.__frames === 2 && (window.__ready = !0));
