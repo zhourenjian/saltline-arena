@@ -11,11 +11,14 @@ function isPhone() {
 // blur and the lens extras, keeps MSAA low (FXAA + sharpening do the edges) and caps shadows, volumetric
 // steps and rain, so the frame time goes into resolution, which is what makes players readable. A phone
 // that renders a heavy preset at 16 fps ends up at a fraction of the resolution, which is far blurrier.
+// Measured with ?perf=1 on an iPhone 17 Pro: rendering at half resolution saved 0.5 ms of 24 - a phone
+// GPU is bound by passes and geometry, not pixels - so every phone preset renders at full scale (up to
+// the screen's 3x, within the pixel budget in render/renderer.js).
 var PHONE = {
-  low: { msaa: 0, shadow: 1024, tex: 512, volSteps: 8, ao: !1, planar: 0, rain: 0.35 },
-  medium: { msaa: 0, shadow: 1024, tex: 1024, volSteps: 8, ao: !1, planar: 0, rain: 0.35 },
-  high: { msaa: 0, shadow: 2048, tex: 1024, volSteps: 10, ao: !1, planar: 0.5, rain: 0.45 },
-  ultra: { msaa: 2, shadow: 2048, tex: 1024, volSteps: 12, ao: !0, planar: 0.5, rain: 0.5 },
+  low: { scale: 1, msaa: 0, shadow: 1024, tex: 512, volSteps: 8, ao: !1, planar: 0, rain: 0.35 },
+  medium: { scale: 1, msaa: 0, shadow: 1024, tex: 1024, volSteps: 8, ao: !1, planar: 0, rain: 0.35 },
+  high: { scale: 1, msaa: 0, shadow: 2048, tex: 1024, volSteps: 10, ao: !1, planar: 0.5, rain: 0.45 },
+  ultra: { scale: 1, msaa: 2, shadow: 2048, tex: 1024, volSteps: 12, ao: !0, planar: 0.5, rain: 0.5 },
 };
 
 // a preset adjusted for this device (the settings menu and the automatic downgrade use this too,

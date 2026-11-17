@@ -4,8 +4,8 @@
 // and a few ms more or less flips between the two (and the phone heating up flips it too). So every
 // frame is timed to the end of its GPU work instead: after rendering, a 1-pixel readPixels waits for the
 // GPU to finish, and "work" is the time from the start of the frame to then. And every item is measured
-// against its own neighbours - switched off and on in turn, three times - so slow drift from heating up
-// cancels out of the difference.
+// against its own neighbours - switched off and on in turn, three times, in the order on-off, off-on,
+// on-off - so slow drift from heating up cancels out of the difference instead of favouring "off".
 import { Vector3 } from "../vendor/three-r180.js";
 
 function enablePerfProbe(context) {
@@ -63,7 +63,7 @@ function enablePerfProbe(context) {
     results = [],
     onAll = [],
     item = -1,
-    phase = 0, // 0..2*CYCLES-1; even = on (normal), odd = item switched off
+    phase = 0, // 0..2*CYCLES-1; see isOff
     t = 0,
     undo = null,
     work = [],
@@ -79,7 +79,9 @@ function enablePerfProbe(context) {
   context.player && (context.player.enabled = !1);
   context.frameCap = 0;
 
-  let trimmed = (a) => {
+  // cycle 0: on, off; cycle 1: off, on; cycle 2: on, off ...
+  let isOff = (ph) => ((ph >> 1) & 1 ? ph % 2 === 0 : ph % 2 === 1),
+    trimmed = (a) => {
       if (!a.length) return 0;
       let s = a.slice().sort((x, y) => x - y).slice(0, Math.max(1, Math.ceil(a.length * 0.9)));
       return s.reduce((x, y) => x + y, 0) / s.length;
@@ -92,7 +94,7 @@ function enablePerfProbe(context) {
   function header() {
     let st = context.render.stats ? context.render.stats() : {},
       res = st.res || [0, 0];
-    return `SALTLINE PERF v2  ${new Date().toISOString().slice(0, 16).replace("T", " ")}
+    return `SALTLINE PERF v3  ${new Date().toISOString().slice(0, 16).replace("T", " ")}
 GPU ${gpu}
 screen ${innerWidth}x${innerHeight} css  dpr ${devicePixelRatio}  render ${res[0]}x${res[1]}  quality ${q0.name}${q0.phone ? " (phone)" : ""}
 msaa ${q0.msaa} shadow ${q0.shadow} vol ${q0.volSteps} ao ${q0.ao ? 1 : 0} planar ${q0.planar} lite ${q0.lite ? 1 : 0}
@@ -111,11 +113,15 @@ msaa ${q0.msaa} shadow ${q0.shadow} vol ${q0.volSteps} ao ${q0.ao ? 1 : 0} plana
       lines.join("\n")
     );
   }
+  function status() {
+    box.textContent =
+      header() + "\n" + body() + `\n\nmeasuring ${item + 1}/${TESTS.length}: ${TESTS[item][0]} ${isOff(phase) ? "OFF" : "on"} (${(phase >> 1) + 1}/${CYCLES})... keep still`;
+  }
   function endPhase() {
     let p = { work: trimmed(work), cpu: trimmed(cpu), vs: trimmed(vs) };
     ((work = []), (cpu = []), (vs = []));
-    if (phase % 2 === 0) (onAll.push(p), cur.on.push(p));
-    else cur.off.push(p);
+    if (isOff(phase)) cur.off.push(p);
+    else (onAll.push(p), cur.on.push(p));
   }
 
   context.perfProbe = {
@@ -165,15 +171,15 @@ msaa ${q0.msaa} shadow ${q0.shadow} vol ${q0.volSteps} ao ${q0.ao ? 1 : 0} plana
         }
         cur = { name: TESTS[item][0], on: [], off: [] };
       } else phase++;
-      if (phase % 2 === 1) {
+      if (isOff(phase)) {
+        if (undo) return void status();
         try {
           undo = TESTS[item][1]();
         } catch (e) {
           ((undo = null), console.error("[perf] " + TESTS[item][0] + ": " + e));
         }
       } else (undo && undo(), (undo = null));
-      box.textContent =
-        header() + "\n" + body() + `\n\nmeasuring ${item + 1}/${TESTS.length}: ${TESTS[item][0]} ${phase % 2 ? "OFF" : "on"} (${(phase >> 1) + 1}/${CYCLES})... keep still`;
+      status();
     },
     // called after the frame is rendered: wait for the GPU, time the whole frame's work
     afterRender(start) {

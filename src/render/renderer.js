@@ -285,12 +285,10 @@ async function createRenderer(context) {
     capHits: 0,
     min: 0.6,
   };
-  // phones: the floor is for the picture as a whole (preset scale x dynamic scale), not the dynamic
-  // scale alone, so even the lowest preset cannot fall below ~60% of the 2x canvas. Past that point a
-  // 30 fps cap (below) is the better trade than a picture too coarse to make out players.
   S.min = 0.6;
-  let minScale = () =>
-    S.touch ? Math.min(1, Math.ceil((0.6 / (context.quality.scale || 1)) * 10 - 1e-6) / 10) : S.min,
+  // phones: resolution is nearly free there (see core/quality.js), so the dynamic scale only ever
+  // trims 10% - slow frames step the preset down, then cap at 30 fps
+  let minScale = () => (S.touch ? 0.9 : S.min),
     lowerPreset = () => ({ ultra: "high", high: "medium", medium: "low" })[context.quality.name];
   function dropPreset(F) {
     let ne = lowerPreset(),
@@ -545,13 +543,13 @@ async function createRenderer(context) {
       resize() {
         let ie = Math.max(2, t.clientWidth || window.innerWidth),
           F = Math.max(2, t.clientHeight || window.innerHeight),
-          X = Math.min(window.devicePixelRatio || 1, 2),
+          X = Math.min(window.devicePixelRatio || 1, context.quality.phone ? 3 : 2),
           ne = context.quality.scale || 1;
         if (_) {
           (n.setPixelRatio(X), n.setSize(ie, F, !1));
           let re = ne * S.scale,
             $ =
-              {
+              (context.quality.phone && { low: 15e5, medium: 2e6, high: 26e5, ultra: 37e5 }[context.quality.name]) || {
                 low: 1e6,
                 medium: 15e5,
                 high: 23e5,

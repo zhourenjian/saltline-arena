@@ -1200,11 +1200,14 @@ ${fe}`,
         l(T, y.motion),
         (xe = y.motion.texture));
     }
+    // phones (lite): 3 bloom levels instead of 6 - on a tile GPU every small pass costs a fixed
+    // amount whatever its size, and the full chain measured ~16 ms of a 24 ms frame on an iPhone
+    let nb = ve.lite ? 3 : b;
     if ((F.copy(ie), ($ = !0), ve.bloom)) {
       let be = xe,
         Oe = M.w,
         pt = M.h;
-      for (let bt = 0; bt < b; bt++)
+      for (let bt = 0; bt < nb; bt++)
         ((D.uniforms.tSrc.value = be),
           D.uniforms.uTexel.value.set(1 / Oe, 1 / pt),
           (D.uniforms.uFirst.value = bt === 0 ? 1 : 0),
@@ -1212,8 +1215,8 @@ ${fe}`,
           (be = y.down[bt].texture),
           (Oe = y.down[bt].width),
           (pt = y.down[bt].height));
-      let ut = y.down[b - 1];
-      for (let bt = b - 2; bt >= 0; bt--)
+      let ut = y.down[nb - 1];
+      for (let bt = nb - 2; bt >= 0; bt--)
         ((C.uniforms.tLow.value = ut.texture),
           (C.uniforms.tHigh.value = y.down[bt].texture),
           C.uniforms.uTexel.value.set(1 / ut.width, 1 / ut.height),
@@ -1246,7 +1249,7 @@ ${fe}`,
         Oe = y.adapt[m],
         pt = y.adapt[1 - m];
       ((be.tPrev.value = Oe.texture),
-        (be.tLum.value = ve.bloom ? y.down[b - 1].texture : xe),
+        (be.tLum.value = ve.bloom ? y.down[nb - 1].texture : xe),
         (be.tDepth.value = Fe),
         be.uSunUv.value.set(Me, we),
         (be.uSunOn.value = Xe),
