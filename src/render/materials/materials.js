@@ -46,7 +46,7 @@ attribute vec3 slRib;
 #endif
 ` + dA,
       )
-      // container ribs (paint on geometry that carries the "rib" attribute): from about 30 m the relief
+      // container ribs (paint on geometry that carries the "rib" attribute): from about 18 m (gone by 48 m) the relief
       // is flattened - vertices pulled to the middle of the relief, their normals turned back to the
       // flat wall's, the groove darkening averaged - so the ribs no longer beat against the pixel grid
       // (the surface keeps its average shading; shadows keep the real ribs)
@@ -71,7 +71,7 @@ attribute vec3 slRib;
         "#include <color_vertex>",
         `#include <color_vertex>
 #ifdef SL_RIBFLAT
-  float slFlat = smoothstep(30.0, 80.0, distance(cameraPosition, (modelMatrix * vec4(position, 1.0)).xyz));
+  float slFlat = smoothstep(18.0, 48.0, distance(cameraPosition, (modelMatrix * vec4(position, 1.0)).xyz));
 #endif
 #if defined(SL_RIBFLAT) && defined(USE_COLOR)
   vColor.rgb *= mix(1.0, 0.91 / (1.0 - 0.18 * smoothstep(0.008, 0.034, slRib.z)), slFlat);

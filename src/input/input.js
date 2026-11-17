@@ -14,7 +14,7 @@ var KEY_BINDINGS = {
   ControlRight: "crouch",
   KeyR: "reload",
   KeyE: "interact",
-  KeyT: "inspect",
+  KeyG: "inspect",
   KeyF: "melee",
   KeyV: "melee",
   Escape: "pause",

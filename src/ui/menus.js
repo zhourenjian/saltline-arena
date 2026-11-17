@@ -46,7 +46,7 @@ var KEYBOARD_CONTROLS_HTML = `
     <div><dt>Fire</dt><dd>Left button</dd></div>
     <div><dt>Aim</dt><dd>Right button</dd></div>
     <div><dt>Reload</dt><dd><kbd>R</kbd></dd></div>
-    <div><dt>Inspect gun</dt><dd><kbd>T</kbd></dd></div>
+    <div><dt>Inspect gun</dt><dd><kbd>G</kbd></dd></div>
     <div><dt>Cut relay</dt><dd>Hold <kbd>E</kbd></dd></div>
     <div><dt>Jump</dt><dd><kbd>Space</kbd></dd></div>
     <div><dt>Climb</dt><dd><kbd>W</kbd> + <kbd>Space</kbd> at a ledge</dd></div>

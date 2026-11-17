@@ -540,23 +540,25 @@ function buildSoldierBody(THREE, CFG) {
   }
 
   // ---- arms and hands ---------------------------------------------------------------------------
+  // red-white-red bands painted round the middle of each forearm (both arms): the colour is part of the
+  // sleeve's own surface (rings are added at the band edges so the edges stay sharp), no extra geometry
+  const BANDS = [[1.0655, 1.0885, 0xb3261e], [1.0425, 1.0625, 0xe8e4da], [1.0155, 1.0385, 0xb3261e]];
+  const sleeveBandColor = (y) => { for (const [lo, hi, col] of BANDS) if (y >= lo && y <= hi) return col; return null; };
+  const SLEEVE_YS = [];
+  for (let y = 1.518; y > 0.939; y -= 0.0165) SLEEVE_YS.push(y);
+  for (const [lo, hi] of BANDS) SLEEVE_YS.push(lo - 0.0004, lo + 0.0004, hi - 0.0004, hi + 0.0004);
+  SLEEVE_YS.sort((a, b) => b - a);
   const ARM = [[1.518, 0.018], [1.505, 0.042], [1.48, 0.057], [1.44, 0.062], [1.37, 0.058], [1.28, 0.053], [1.2, 0.051], [1.17, 0.051], [1.13, 0.05], [1.07, 0.048], [1.0, 0.043], [0.955, 0.039], [0.94, 0.0385]].reverse();
   for (const [S, s] of SIDES) {
     const rings = [];
-    for (let y = 1.518; y > 0.939; y -= 0.0165) { const r = sample(ARM, y)[1]; rings.push(K.ring([s * SHOULDER_X, y, 0], [1, 0, 0], [0, 0, 1], r * 0.96, r * 1.05, 16)); }
+    for (const y of SLEEVE_YS) { const r = sample(ARM, y)[1]; rings.push(K.ring([s * SHOULDER_X, y, 0], [1, 0, 0], [0, 0, 1], r * 0.96, r * 1.05, 16)); }
     const armW = (x, y) => {
       const wc = 0.55 * sstep(1.42, 1.5, y), te = sstep(ELBOW_Y + 0.05, ELBOW_Y - 0.05, y), tt = sstep(1.1, 0.96, y);
       return [['chest', wc], ['uarm' + S, (1 - wc) * (1 - te)], ['farm' + S, te * (1 - tt)], ['twist' + S, te * tt]];
     };
-    B.add('cloth', K.loft(rings, { capA: 'soft', capB: 'soft' }), armW, C.uniform);
+    B.add('cloth', K.loft(rings, { capA: 'soft', capB: 'soft' }), armW, (x, y) => sleeveBandColor(y) ?? C.uniform);
     B.add('cloth', K.put(K.rbox(0.012, 0.075, 0.062, 0.005), [s * (SHOULDER_X + 0.058), 1.385, 0]), 'uarm' + S, shade(C.uniform, 0.8)); // sleeve pocket
     if (swat) B.add('hard', K.put(K.ellipsoid(0.036, 0.058, 0.03, 12, 8), [s * SHOULDER_X, 1.158, -0.04]), [['farm' + S, 0.6], ['uarm' + S, 0.4]], C.pad);
-    // red-white-red bands round the middle of each forearm (both arms, both characters)
-    for (const [y0, y1, col] of [[1.088, 1.066, 0xb3261e], [1.062, 1.042, 0xe8e4da], [1.038, 1.016, 0xb3261e]]) {
-      const band = [];
-      for (const y of [y0, y1]) { const r = sample(ARM, y)[1]; band.push(K.ring([s * SHOULDER_X, y, 0], [1, 0, 0], [0, 0, 1], r * 1.05 + 0.003, r * 1.05 + 0.007, 16)); }
-      B.add('cloth', K.loft(band, { capA: 'hard', capB: 'hard' }), armW, col);
-    }
     // glove: cuff, palm, knuckle guard, fingers
     const cuff = [];
     for (const [y, a, b] of [[0.952, 0.033, 0.04], [0.93, 0.031, 0.039], [0.908, 0.028, 0.039], [0.893, 0.024, 0.041]]) cuff.push(K.ring([s * SHOULDER_X, y, 0], [1, 0, 0], [0, 0, 1], a, b, 14, 2.4));
