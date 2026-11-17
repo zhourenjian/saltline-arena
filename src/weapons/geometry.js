@@ -351,8 +351,8 @@ function w_() {
         [
           [-0.0078, 0.0335],
           [0.0078, 0.0335],
-          [0.0106, 0.0402],
-          [-0.0106, 0.0402],
+          [0.0106, 0.0418],
+          [-0.0106, 0.0418],
         ],
         -0.096,
         0.397,
@@ -371,7 +371,7 @@ function w_() {
   ];
   for (let F = 0; F < 49; F++) {
     let X = -0.094 + F * 0.01;
-    r.push(qo(x, X, X + 0.0048, 8e-4, i, p));
+    r.push(qo(x, X, X + 0.0072, 8e-4, i, p)); // wide, shallow teeth: a 1 cm pitch alias less (moire) when the gun sways
   }
   let y = [
     [-0.1, -0.021],

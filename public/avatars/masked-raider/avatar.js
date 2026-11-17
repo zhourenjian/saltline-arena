@@ -551,11 +551,10 @@ function buildSoldierBody(THREE, CFG) {
     B.add('cloth', K.loft(rings, { capA: 'soft', capB: 'soft' }), armW, C.uniform);
     B.add('cloth', K.put(K.rbox(0.012, 0.075, 0.062, 0.005), [s * (SHOULDER_X + 0.058), 1.385, 0]), 'uarm' + S, shade(C.uniform, 0.8)); // sleeve pocket
     if (swat) B.add('hard', K.put(K.ellipsoid(0.036, 0.058, 0.03, 12, 8), [s * SHOULDER_X, 1.158, -0.04]), [['farm' + S, 0.6], ['uarm' + S, 0.4]], C.pad);
-    else if (s > 0) {
-      const band = [];
-      for (const y of [1.335, 1.3]) band.push(K.ring([s * SHOULDER_X, y, 0], [1, 0, 0], [0, 0, 1], 0.0595, 0.064, 16));
-      B.add('cloth', K.loft(band, { capA: 'hard', capB: 'hard' }), 'uarm' + S, C.accent); // armband
-    }
+    // red band round the middle of each sleeve (both arms, both characters)
+    const band = [];
+    for (const y of [1.335, 1.3]) band.push(K.ring([s * SHOULDER_X, y, 0], [1, 0, 0], [0, 0, 1], 0.0595, 0.064, 16));
+    B.add('cloth', K.loft(band, { capA: 'hard', capB: 'hard' }), 'uarm' + S, 0xb3261e);
     // glove: cuff, palm, knuckle guard, fingers
     const cuff = [];
     for (const [y, a, b] of [[0.952, 0.033, 0.04], [0.93, 0.031, 0.039], [0.908, 0.028, 0.039], [0.893, 0.024, 0.041]]) cuff.push(K.ring([s * SHOULDER_X, y, 0], [1, 0, 0], [0, 0, 1], a, b, 14, 2.4));

@@ -687,6 +687,7 @@ async function createWeapon(context) {
     let ut = (!!we.sprinting || !!we.climbing) && !Oe && !be.ads && !k.reload;
     ((k.sprintT = damp(k.sprintT, ut ? 1 : 0, 9, Me)),
       be.pressed && be.pressed("reload") && Fe(),
+      be.pressed && be.pressed("inspect") && !k.reload && k.inspect < 0 && !be.ads && !Oe && (k.inspect = 0),
       k.autoReload >= 0 && ((k.autoReload -= Me), k.autoReload < 0 && Fe()));
     let nn = 0;
     if (

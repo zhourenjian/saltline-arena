@@ -941,8 +941,8 @@ body {
    lower); AIM above FIRE and a little to the left; RELOAD below-left. Every button is placed by
    its centre: --fx from the right edge, --fy from the bottom, then an offset (right, down). */
 .touch {
-  --fx: 135px;
-  --fy: calc(140px + var(--sab));
+  --fx: 121px;
+  --fy: calc(126px + var(--sab));
 }
 .t-fire {
   width: 76px;
@@ -954,38 +954,53 @@ body {
 .t-ads {
   width: 54px;
   height: 54px;
-  right: calc(var(--fx) + 12px - 27px + var(--sar));
-  bottom: calc(var(--fy) + 104px - 27px);
+  right: calc(var(--fx) + 10px - 27px + var(--sar));
+  bottom: calc(var(--fy) + 94px - 27px);
 }
 .t-jump {
   width: 52px;
   height: 52px;
-  right: calc(var(--fx) - 88px - 26px + var(--sar));
-  bottom: calc(var(--fy) + 56px - 26px);
+  right: calc(var(--fx) - 80px - 26px + var(--sar));
+  bottom: calc(var(--fy) + 50px - 26px);
 }
 .t-crouch {
   width: 52px;
   height: 52px;
-  right: calc(var(--fx) - 88px - 26px + var(--sar));
-  bottom: calc(var(--fy) - 64px - 26px);
+  right: calc(var(--fx) - 80px - 26px + var(--sar));
+  bottom: calc(var(--fy) - 56px - 26px);
   font-size: 9px;
   letter-spacing: 0.06em;
 }
 .t-crouch span {
   margin-right: -0.06em;
 }
+.t-inspect {
+  width: 50px;
+  height: 50px;
+  right: calc(var(--fx) - 8px - 25px + var(--sar));
+  bottom: calc(var(--fy) - 94px - 25px);
+  font-size: 8px;
+  letter-spacing: 0.04em;
+}
+.t-inspect span {
+  margin-right: -0.04em;
+}
 .t-reload {
-  width: 46px;
-  height: 46px;
-  right: calc(var(--fx) + 60px - 23px + var(--sar));
-  bottom: calc(var(--fy) - 100px - 23px);
-  font-size: 11px;
+  width: 50px;
+  height: 50px;
+  right: calc(var(--fx) + 58px - 25px + var(--sar));
+  bottom: calc(var(--fy) - 80px - 25px);
+  font-size: 9px;
+  letter-spacing: 0.04em;
+}
+.t-reload span {
+  margin-right: -0.04em;
 }
 .t-interact {
   width: 66px;
   height: 66px;
-  right: calc(var(--fx) + 105px - 33px + var(--sar));
-  bottom: calc(var(--fy) + 10px - 33px);
+  right: calc(var(--fx) + 98px - 33px + var(--sar));
+  bottom: calc(var(--fy) + 8px - 33px);
   border-color: var(--signal);
   color: var(--signal);
   display: none;
@@ -997,8 +1012,8 @@ body {
   width: 68px;
   height: 40px;
   border-radius: 2px;
-  right: var(--gr);
-  top: calc(10px + var(--sat));
+  right: calc(var(--gr) - 14px);
+  top: calc(24px + var(--sat));
   letter-spacing: 0.16em;
   font-size: 12px;
   color: var(--bone);

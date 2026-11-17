@@ -276,7 +276,7 @@ await test("watching on a phone: no action buttons, lists in opposite corners, s
   for (const [w, h] of [[390, 844], [844, 390]]) {
     await metrics(page, w, h);
     await sleep(700);
-    for (const sel of [".t-fire", ".t-ads", ".t-reload", ".t-jump", ".t-interact"]) assert(!shown(await rect(page, sel)), "action button hidden while watching: " + sel);
+    for (const sel of [".t-fire", ".t-ads", ".t-reload", ".t-inspect", ".t-jump", ".t-interact"]) assert(!shown(await rect(page, sel)), "action button hidden while watching: " + sel);
     assert(shown(await rect(page, ".t-pause")), "MENU stays");
     const board = await rect(page, ".br-board"), wait = await rect(page, ".br-wait"), spec = await rect(page, ".br-spec"), chat = await rect(page, ".br-chat");
     assert(shown(board) && shown(wait), "both lists are shown", { board, wait });
@@ -329,12 +329,25 @@ await test("touch crouch toggle: CROUCH latches the stance, a second tap stands 
   await enterBrawl(page);
   const b = await rect(page, ".t-crouch");
   assert(shown(b) && b.w >= 48, "a CROUCH button", b);
-  for (const sel of [".t-fire", ".t-jump", ".t-reload", ".t-ads"]) assert(!overlap(b, await rect(page, sel)), "CROUCH does not overlap " + sel);
+  for (const sel of [".t-fire", ".t-jump", ".t-reload", ".t-ads", ".t-inspect"]) assert(!overlap(b, await rect(page, sel)), "CROUCH does not overlap " + sel);
+  for (const sel of [".t-fire", ".t-jump", ".t-ads", ".t-inspect"]) assert(!overlap(await rect(page, ".t-reload"), await rect(page, sel)), "RELOAD does not overlap " + sel);
+  assert((await page.ev(`return document.querySelector(".t-reload").textContent`)) === "RELOAD", "RELOAD is spelled out");
   await tap(page, b.x + b.w / 2, b.y + b.h / 2);
   await page.waitFor(`__G.player.crouching === true`, 2000);
   assert(await page.ev(`return document.querySelector(".t-crouch").classList.contains("active")`), "button shows it is on");
   await tap(page, b.x + b.w / 2, b.y + b.h / 2);
   await page.waitFor(`__G.player.crouching === false`, 2000);
+});
+
+await test("touch INSPECT button: the gun is looked over, other buttons stay clear", async () => {
+  const page = await phone("&noinstall=1");
+  pages.push(page);
+  await enterBrawl(page);
+  const b = await rect(page, ".t-inspect");
+  assert(shown(b) && b.w >= 46, "an INSPECT button", b);
+  await page.waitFor(`__G.weapon.state === "idle"`, 6000);
+  await tap(page, b.x + b.w / 2, b.y + b.h / 2);
+  await page.waitFor(`__G.weapon.state === "inspect"`, 3000);
 });
 
 await test("Home Screen app whose layout viewport stops above the home indicator: the app box still reaches the screen's bottom edge", async () => {
