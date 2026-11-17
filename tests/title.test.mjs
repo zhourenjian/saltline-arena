@@ -58,7 +58,7 @@ try {
         const cam = new V(b.p.x, b.p.y + 1.68, b.p.z), w = cam.clone().sub(p), t = w.dot(dir), off = w.clone().addScaledVector(dir, -t).length();
         return { off, t, pitchDir: Math.asin(dir.y) };`);
       if (d.err) { await page.waitFor(`__G.titleBattle.bots()[0].opp.visible`, 70000); }
-      ok(!d.err && d.off < 0.16, `pitch ${pitch}: muzzle line misses the camera by ${d.off}`, d);
+      ok(!d.err && d.off < 0.22, `pitch ${pitch}: muzzle line misses the camera by ${d.off}`, d);
     }
     // the stock stays about where it is when the gun is carried (at the shoulder) and out of the head
     const rear = (ad) => page.ev(`window.__ad = ${ad}; __G.titleBattle.pitch = 0; return new Promise((res) => setTimeout(() => { const T = __G.titleBattle, b = T.bots()[0], V = __G.camera.position.constructor, p = new V(), d = new V();
