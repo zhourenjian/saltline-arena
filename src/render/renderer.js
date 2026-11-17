@@ -274,7 +274,7 @@ async function createRenderer(context) {
     });
   let S = {
     scale: 1,
-    enabled: !(e.shot || e.show || e.dynres === "0"),
+    enabled: !(e.shot || e.show || e.perf || e.dynres === "0"),
     acc: 0,
     n: 0,
     settle: 3.5,
@@ -393,6 +393,7 @@ async function createRenderer(context) {
         e.shot ||
         (T & 1) === 0 ||
         !h.shadow.map) &&
+        !(context.perfFlags && context.perfFlags.noShadow && h.shadow.map) &&
         (n.shadowMap.needsUpdate = !0),
       n.render(r, a),
       E && (A.copyDepth(b), n.setRenderTarget(m)),

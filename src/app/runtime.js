@@ -25,6 +25,7 @@ import { SHOWCASE_MODULES } from "./showcases.js";
 import { showFatalError } from "./diagnostics.js";
 import { bootElement, setBootProgress } from "./boot-screen.js";
 import { enableBenchmark } from "./benchmark.js";
+import { enablePerfProbe } from "./perf-probe.js";
 import { installViewport } from "./viewport.js";
 import { createInstallGuide } from "../ui/install-guide.js";
 import { createShowcaseInput, createShowcasePlayer } from "./showcase-stubs.js";
@@ -66,6 +67,7 @@ async function bootSystems(options, setFrame) {
     benchmark =
       !!params.bench || (!options.params && location.hash === "#bench");
   benchmark && ((params.noaudio = "1"), (params.autostart = "1"));
+  params.perf && ((params.noaudio = "1"), (params.autostart = "1"));
   let context = {
     THREE: THREE,
     params: params,
@@ -254,7 +256,8 @@ async function bootSystems(options, setFrame) {
       "[boot] render.onLevelReady failed: " + ((h && h.stack) || h),
     );
   }
-  let averageFrameSeconds = 0;
+  let averageFrameSeconds = 0,
+    lastCpuMs = 0;
   if (
     ((window.__stats = () => ({
       ...(context.render.stats ? context.render.stats() : {}),
@@ -279,6 +282,7 @@ async function bootSystems(options, setFrame) {
     context.weapon.setVisible &&
     context.weapon.setVisible(!1),
     benchmark && enableBenchmark(context),
+    params.perf && enablePerfProbe(context),
     await setBootProgress("Ready", 1));
   let boot = bootElement();
   boot &&
@@ -379,7 +383,8 @@ async function bootSystems(options, setFrame) {
         cameraOverride &&
           (context.camera.position.copy(cameraOverride.pos),
           context.camera.lookAt(cameraOverride.look)),
-        context.bench && context.bench.frame(f));
+        context.bench && context.bench.frame(f),
+        context.perfProbe && context.perfProbe.frame(p, f, lastCpuMs));
       try {
         context.render.frame(p);
       } catch (v) {
@@ -387,7 +392,8 @@ async function bootSystems(options, setFrame) {
           ((updateSystem.err.render = 1),
           console.error("[loop] render.frame threw: " + ((v && v.stack) || v)));
       }
-      (context.input.endFrame && context.input.endFrame(),
+      ((lastCpuMs = performance.now() - h),
+        context.input.endFrame && context.input.endFrame(),
         window.__frames++,
         window.__frames === 2 && (window.__ready = !0));
     }));
